@@ -4,7 +4,6 @@
 #include "Polyhedral.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
-#include "Test.hpp"
 
 std::vector<mpq_class> initializeRateMatrix(void);
 
