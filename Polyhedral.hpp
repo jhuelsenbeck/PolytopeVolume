@@ -3,7 +3,8 @@
 
 #include <vector>
 #include <gmpxx.h>
-class Point;
+#include "Geometry.hpp"
+class Vector;
 
 
 
@@ -15,7 +16,8 @@ class Polyhedral {
     
     private:
         void        initializePlanes(void);
-        bool        isValid(Point& pt);
+        bool        isLineInList(Line& x, std::vector<Line>& lines);
+        bool        isValid(Vector& pt);
         mpq_class   wAC;
         mpq_class   wAG;
         mpq_class   wAT;
