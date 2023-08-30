@@ -1,4 +1,5 @@
 #include <map>
+#include "Facet.hpp"
 #include "Geometry.hpp"
 #include "Msg.hpp"
 #include "Polyhedral.hpp"

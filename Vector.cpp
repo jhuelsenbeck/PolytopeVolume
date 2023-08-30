@@ -62,10 +62,33 @@ Vector Vector::cross(Vector& rhs) {
     return v;
 }
 
+inline mpq_class Vector::distanceSquared(const Vector& vec) const {
+
+    return (vec.x-x)*(vec.x-x) + (vec.y-y)*(vec.y-y) + (vec.z-z)*(vec.z-z);
+}
+
 std::string Vector::getStr(void) {
 
     std::string str = "(";
     str += std::to_string(x.get_d()) + ", " + std::to_string(y.get_d()) + ", " + std::to_string(z.get_d());
     str += ")";
     return str;
+}
+
+void Vector::normalize(void) {
+
+    //@@const double EPSILON = 0.000001f;
+    mpq_class dist = x * x + y * y + z * z;
+    if (dist == 0)
+        return; // or return *this
+
+    mpf_class distInv = 1 / dist;
+    mpf_class rDistInv = distInv;
+    mpf_class invLength = sqrt(rDistInv);
+    mpq_class invLengthQ(invLength);
+    
+    x *= invLengthQ;
+    y *= invLengthQ;
+    z *= invLengthQ;
+    //return *this;
 }

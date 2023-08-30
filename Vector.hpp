@@ -14,10 +14,12 @@ class Vector {
         bool            operator==(Vector& rhs);
         bool            operator!=(Vector& rhs);
         Vector          cross(Vector& rhs);
+        mpq_class       distanceSquared(const Vector& vec) const;
         mpq_class&      getX(void) { return x; }
         mpq_class&      getY(void) { return y; }
         mpq_class&      getZ(void) { return z; }
         std::string     getStr(void);
+        void            normalize(void);
         void            setX(mpq_class& xQ) { x = xQ; }
         void            setY(mpq_class& yQ) { y = yQ; }
         void            setZ(mpq_class& zQ) { z = zQ; }

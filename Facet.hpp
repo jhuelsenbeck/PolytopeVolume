@@ -18,7 +18,7 @@ class Facet : public Plane {
                                ~Facet(void);
         void                    addVertex(Vertex* p);
         void                    addVertex(std::vector<Vertex*> verts);
-        double                  area(void);
+        mpq_class               area(void);
         Vector                  centroid(void);
         Vertex*                 getFirstVertex(void) { return firstVertex; }
         std::string             getString(void);
@@ -27,7 +27,7 @@ class Facet : public Plane {
         void                    print(void);
         void                    print(int idx);
         void                    removeVerticesBehindPlane(Plane& p);
-        double                  volume(Vertex p);
+        mpf_class               volume(Vertex p);
 
     private:
         double                  findArea(int n, double* x, double* y);

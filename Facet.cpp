@@ -2,6 +2,7 @@
 #include <map>
 #include "Edge.hpp"
 #include "Facet.hpp"
+#include "Geometry.hpp"
 #include "VertexFactory.hpp"
 
 
@@ -43,26 +44,35 @@ void Facet::addVertex(std::vector<Vertex*> verts) {
         vertices.push_back(v);
 }
 
-double Facet::area(void) {
+mpq_class Facet::area(void) {
 
     if (areaCalculated == true)
         return facetArea;
 
-    Vector unitNormal = normal;
+    Vector unitNormal;
+    this->normal(unitNormal);
     unitNormal.normalize();
 
     Vertex* f = firstVertex;
     Vertex* p = f;
     Vector sumCrossProducts;
+    mpq_class x = sumCrossProducts.getX();
+    mpq_class y = sumCrossProducts.getY();
+    mpq_class z = sumCrossProducts.getZ();
     do
         {
-        Vector x = p->cross(*(p->getTo()));
-        sumCrossProducts += x;
+        Vector crs = p->cross(*(p->getTo()));
+        x += crs.getX();
+        y += crs.getY();
+        z += crs.getZ();
+        //sumCrossProducts += crs;
 
         p = p->getTo();
         } while (p != f);
-    double dot = unitNormal.dot(sumCrossProducts);
-    facetArea = fabs(dot) * 0.5;
+    mpq_class dot = Geometry::dotProduct(unitNormal, sumCrossProducts);
+    if (dot < 0)
+        dot = -dot;
+    mpq_class facetArea = dot / 2;
     areaCalculated = true;
     
     return facetArea;
@@ -80,7 +90,10 @@ Vector Facet::centroid(void) {
         sumZ += v->z;
         }
     int n = (int)vertices.size();
-    return Vector( sumX/n, sumY/n, sumZ/n );
+    sumX /= n;
+    sumY /= n;
+    sumZ /= n;
+    return Vector( sumX, sumY, sumZ );
 }
 
 double Facet::findArea(int n, double* x, double* y) {
@@ -194,16 +207,28 @@ void Facet::removeVerticesBehindPlane(Plane& p) {
     for (Vertex* v : vertices)
         {
         Edge edge(&midPoint,v);
-        if ( p.isIntersected(edge) == true)
+
+        //if ( p.isIntersected(edge) == true)
+        if ( Geometry::isIntersected(p, edge) == true)
             {
-            Vector i = p.intersect(edge);
-            double dMI = i.distance(midPoint);
-            double dVI = i.distance(*v);
-            if ( fabs(dMI + dVI - edge.getDistance()) < 10e-8)
-                {
-                verticesToRemove.push_back(v);
-                }
+            Vector i;
+            Geometry::intersect(p, edge, i);
             
+            mpq_class dMiSq = Geometry::distanceSquared(i, midPoint);
+            mpq_class dViSq = Geometry::distanceSquared(i, *v);
+            mpq_class& edSq = edge.getDistanceSquared();
+            
+            mpf_class dMi(dMiSq, 1000);
+            mpf_class dVi(dViSq, 1000);
+            mpf_class ed(edSq, 1000);
+            dMi = sqrt(dMi);
+            dVi = sqrt(dVi);
+            ed  = sqrt(ed);
+            mpf_class diff = dMi + dVi - ed;
+            if (diff < 0.0)
+                diff = -diff;
+            if (abs(diff) < 10e-8)
+                verticesToRemove.push_back(v);
             }
         }
     
@@ -218,10 +243,11 @@ void Facet::removeVertex(Vertex* v) {
     vFactory.returnToPool(v);
 }
 
-double Facet::volume(Vertex p) {
+mpf_class Facet::volume(Vertex p) {
 
-    double d = getDistance(p);
-    double a = area();
-    return d * a / 3.0;
+    mpf_class d = getDistance(p);
+    mpf_class a = area();
+    mpf_class v = d * a / 3.0;
+    return v;
 }
 

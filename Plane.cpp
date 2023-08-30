@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <iostream>
+#include "Geometry.hpp"
 #include "Plane.hpp"
 
 
@@ -58,6 +59,24 @@ Plane::Plane(Vector& pt1, Vector& pt2, Vector& pt3) {
     this->b = a2 * c1 - a1 * c2;
     this->c = a1 * b2 - b1 * a2;
     this->d = (- a * x1 - b * y1 - c * z1);
+}
+
+mpf_class Plane::getDistance(Vector& point) {
+
+    // Distance = (| a*x1 + b*y1 + c*z1 + d |) / (sqrt( a*a + b*b + c*c))
+    mpq_class& x1 = point.getX();
+    mpq_class& y1 = point.getY();
+    mpq_class& z1 = point.getZ();
+    mpq_class dot = a * a + b * b + c * c;
+    if (dot <= 0)
+        return mpq_class(0);
+    mpq_class numerQ = a * x1 + b * y1 + c * z1 + d;
+    if (numerQ < 0)
+        numerQ = -numerQ;
+    mpf_class numer(numerQ, 1000);
+    mpf_class denom(dot, 1000);
+    mpf_class distF = numer / sqrt(denom);
+    return distF;
 }
 
 void Plane::normal(Vector& n) {

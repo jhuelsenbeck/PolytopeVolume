@@ -4,6 +4,7 @@
 #include <vector>
 #include <gmpxx.h>
 #include "Geometry.hpp"
+class Facet;
 class Vector;
 
 
@@ -30,6 +31,7 @@ class Polyhedral {
         mpq_class   maxX;
         mpq_class   maxY;
         mpq_class   maxZ;
+        std::vector<Facet*>     facets;
 };
 
 #endif

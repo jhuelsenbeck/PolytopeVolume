@@ -14,6 +14,7 @@ class Plane {
         mpq_class&      getB(void) { return b; }
         mpq_class&      getC(void) { return c; }
         mpq_class&      getD(void) { return d; }
+        mpf_class       getDistance(Vector& point);
         void            normal(Vector& n);
     
     private:

@@ -4,7 +4,6 @@
 #include "Line.hpp"
 #include "Vector.hpp"
 #include "Vertex.hpp"
-class Vector;
 
 
 class Edge : public Line {
@@ -12,13 +11,12 @@ class Edge : public Line {
     public:
                         Edge(void) = delete;
                         Edge(Vertex* v1, Vertex* v2);
-        double          getDistance(void) { return d; }
-        Vertex*         isIntersected(Line& line);
+        mpq_class&      getDistanceSquared(void) { return dd; }
 
     private:
         class Vector*   v1;
         class Vector*   v2;
-        double          d;
+        mpq_class       dd;
 };
 
 #endif
