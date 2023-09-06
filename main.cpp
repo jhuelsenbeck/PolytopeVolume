@@ -16,6 +16,8 @@ int main(int argc, const char* argv[]) {
 
     Polyhedral poly(W);
     
+    
+    
     return 0;
 }
 

@@ -31,7 +31,7 @@ class Polyhedral {
         mpq_class   maxX;
         mpq_class   maxY;
         mpq_class   maxZ;
-        std::vector<Facet*>     facets;
+        std::vector<Facet*> facets;
 };
 
 #endif
