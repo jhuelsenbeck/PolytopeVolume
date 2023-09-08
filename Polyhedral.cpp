@@ -61,7 +61,6 @@ void Polyhedral::initializePlanes(void) {
     Plane bottom = Plane( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ, zeroQ,  oneQ), Vector( oneQ, zeroQ,  oneQ) );
     Plane left   = Plane( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ,  oneQ, zeroQ), Vector(zeroQ,  oneQ,  oneQ) );
     Plane right  = Plane( Vector( oneQ, zeroQ, zeroQ), Vector( oneQ,  oneQ, zeroQ), Vector( oneQ,  oneQ,  oneQ) );
-    
 
     std::vector<Plane> planes;
     planes.push_back(front);
@@ -77,8 +76,8 @@ void Polyhedral::initializePlanes(void) {
     planes.push_back(yz1);
     planes.push_back(yz2);
     
-    std::map<Plane*,std::vector<Vector>> verticesMap;
-    std::map<Plane*,std::vector<Line> > lines;
+    VertexFactory& vf = VertexFactory::vertexFactoryInstance();
+    std::map<Plane*,std::vector<Vertex*>> verticesMap;
     for (int i=0, n1 = (int)planes.size(); i<n1; i++)
         {
         for (int j=i+1, n2 = (int)planes.size(); j<n2; j++)
@@ -87,16 +86,15 @@ void Polyhedral::initializePlanes(void) {
                 {
                 if (i != j && i != k && j != k)
                     {
-                    
-                    Vector intersectionPoint;
-                    bool planesIntersect = Geometry::intersect(planes[i], planes[j], planes[k], intersectionPoint);
-                    if (planesIntersect == true && isValid(intersectionPoint) == true)
+                    Vertex* intersectionPoint = vf.getVertex();
+                    bool planesIntersect = Geometry::intersect(planes[i], planes[j], planes[k], *intersectionPoint);
+                    if (planesIntersect == true && isValid(*intersectionPoint) == true)
                         {
                         // add intersection Vector to planes map
-                        std::map<Plane*,std::vector<Vector> >::iterator it = verticesMap.find(&planes[i]);
+                        std::map<Plane*,std::vector<Vertex*> >::iterator it = verticesMap.find(&planes[i]);
                         if (it == verticesMap.end())
                             {
-                            std::vector<Vector> vec;
+                            std::vector<Vertex*> vec;
                             vec.push_back(intersectionPoint);
                             verticesMap.insert( std::make_pair(&planes[i],vec) );
                             }
@@ -106,7 +104,7 @@ void Polyhedral::initializePlanes(void) {
                         it = verticesMap.find(&planes[j]);
                         if (it == verticesMap.end())
                             {
-                            std::vector<Vector> vec;
+                            std::vector<Vertex*> vec;
                             vec.push_back(intersectionPoint);
                             verticesMap.insert( std::make_pair(&planes[j],vec) );
                             }
@@ -116,70 +114,13 @@ void Polyhedral::initializePlanes(void) {
                         it = verticesMap.find(&planes[k]);
                         if (it == verticesMap.end())
                             {
-                            std::vector<Vector> vec;
+                            std::vector<Vertex*> vec;
                             vec.push_back(intersectionPoint);
                             verticesMap.insert( std::make_pair(&planes[k],vec) );
                             }
                         else
                             it->second.push_back(intersectionPoint);
-
-                        // add line of intersection to lines map
-                        Line lineIJ;
-                        Line lineIK;
-                        Line lineJK;
-                        bool intersectsIJ = Geometry::intersect(planes[i], planes[j], lineIJ);
-                        bool intersectsIK = Geometry::intersect(planes[i], planes[k], lineIK);
-                        bool intersectsJK = Geometry::intersect(planes[j], planes[k], lineJK);
-                        if (intersectsIJ == false || intersectsIK == false || intersectsJK == false)
-                            Msg::error("Planes should intersect forming line");
-                        
-                        std::map<Plane*,std::vector<Line> >::iterator lit = lines.find(&planes[i]);
-                        if (lit != lines.end())
-                            {
-                            if (isLineInList(lineIJ, lit->second) == false)
-                                lit->second.push_back(lineIJ);
-                            if (isLineInList(lineIK, lit->second) == false)
-                                lit->second.push_back(lineIK);
-                            }
-                        else
-                            {
-                            std::vector<Line> v;
-                            v.push_back(lineIJ);
-                            v.push_back(lineIK);
-                            lines.insert( std::make_pair(&planes[i], v) );
-                            }
-                        lit = lines.find(&planes[j]);
-                        if (lit != lines.end())
-                            {
-                            if (isLineInList(lineIJ, lit->second) == false)
-                                lit->second.push_back(lineIJ);
-                            if (isLineInList(lineJK, lit->second) == false)
-                                lit->second.push_back(lineJK);
-                            }
-                        else
-                            {
-                            std::vector<Line> v;
-                            v.push_back(lineIJ);
-                            v.push_back(lineJK);
-                            lines.insert( std::make_pair(&planes[j], v) );
-                            }
-                        lit = lines.find(&planes[k]);
-                        if (lit != lines.end())
-                            {
-                            if (isLineInList(lineIK, lit->second) == false)
-                                lit->second.push_back(lineIK);
-                            if (isLineInList(lineJK, lit->second) == false)
-                                lit->second.push_back(lineJK);
-                            }
-                        else
-                            {
-                            std::vector<Line> v;
-                            v.push_back(lineIK);
-                            v.push_back(lineJK);
-                            lines.insert( std::make_pair(&planes[k], v) );
-                            }
-
-
+                            
                         }
                         
                     }
@@ -190,23 +131,40 @@ void Polyhedral::initializePlanes(void) {
     std::cout << "Planes" << std::endl;
     for (auto p : verticesMap)
         {
-        std::cout << *p.first << " -- ";
+        std::cout << p.first->getStr() << " -- ";
         for (int i=0; i<p.second.size(); i++)
-            std::cout << p.second[i].getStr()    << " ";
-        std::cout << std::endl;
-        }
-    std::cout << "Lines" << std::endl;
-    for (auto l : lines)
-        {
-        std::cout << *l.first << " -- ";
-        for (int i=0; i<l.second.size(); i++)
-            std::cout << l.second[i]    << " ";
+            std::cout << p.second[i]->getStr()    << " ";
         std::cout << std::endl;
         }
         
+    std::cout << "Planes count (" << verticesMap.size() << "):" << std::endl;
+    for (auto p : verticesMap)
+        {
+        std::cout << p.first->getStr() << " -- " << p.second.size() << std::endl;
+        }
+        
+    // set up facets
+    for (auto p : verticesMap)
+        {
+        Vector centroid = Geometry::centroid(p.second);
+        Vector* firstVec = p.second[0];
+        for (int i=0, n=(int)p.second.size(); i<n; i++)
+            {
+            double ang = Geometry::angle(centroid, *firstVec, *(p.second[i]));
+            std::cout << p.first << " " << centroid.getStr() << " " << ang << std::endl;
+            }
+        }
+    
+    
+    
+    
+    
+    
+    
+#   if 0
     // set up facets
     VertexFactory& vFactory = VertexFactory::vertexFactoryInstance();
-    for (std::map<Plane*,std::vector<Vector> >::iterator it = verticesMap.begin(); it != verticesMap.end(); it++)
+    for (std::map<Plane*,std::vector<Vertex*> >::iterator it = verticesMap.begin(); it != verticesMap.end(); it++)
         {
         // get the information for the plane
         Plane* p = it->first;
@@ -290,7 +248,7 @@ void Polyhedral::initializePlanes(void) {
         }
         
         
-        
+#   endif
         
         
         

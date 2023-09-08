@@ -75,6 +75,13 @@ std::string Vector::getStr(void) {
     return str;
 }
 
+double Vector::length(void) {
+
+    mpq_class sqQ = (x * x) + (y * y) + (z * z);
+    double sqD = sqQ.get_d();
+    return std::sqrtf(sqD);
+}
+
 void Vector::normalize(void) {
 
     //@@const double EPSILON = 0.000001f;

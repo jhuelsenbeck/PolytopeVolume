@@ -2,6 +2,62 @@
 
 
 
+double Geometry::angle(Vector& a, Vector& b, Vector& c) {
+
+    mpq_class x = a.getX() - b.getX();
+    mpq_class y = a.getY() - b.getY();
+    mpq_class z = a.getZ() - b.getZ();
+    Vector ab(x, y, z);
+    x = a.getX() - c.getX();
+    y = a.getY() - c.getY();
+    z = a.getZ() - c.getZ();
+    Vector ac(x, y, z);
+    
+    // return angle between [0, 180]
+    double l1 = ab.length();
+    double l2 = ac.length();
+    mpq_class dQ = Geometry::dotProduct(ab, ac);
+    double dd = dQ.get_d();
+    double angle = acosf(dd / (l1 * l2)) / 3.141592f * 180.0f;
+    return angle;
+}
+
+Vector Geometry::centroid(std::vector<Vector*>& vecs) {
+
+    mpq_class sumX = 0;
+    mpq_class sumY = 0;
+    mpq_class sumZ = 0;
+    for (Vector* v : vecs)
+        {
+        sumX += v->x;
+        sumY += v->y;
+        sumZ += v->z;
+        }
+    mpq_class n = (int)vecs.size();
+    mpq_class x = sumX / n;
+    mpq_class y = sumY / n;
+    mpq_class z = sumZ / n;
+    return Vector(x, y, z);
+}
+
+Vector Geometry::centroid(std::vector<Vertex*>& vecs) {
+
+    mpq_class sumX = 0;
+    mpq_class sumY = 0;
+    mpq_class sumZ = 0;
+    for (Vector* v : vecs)
+        {
+        sumX += v->x;
+        sumY += v->y;
+        sumZ += v->z;
+        }
+    mpq_class n = (int)vecs.size();
+    mpq_class x = sumX / n;
+    mpq_class y = sumY / n;
+    mpq_class z = sumZ / n;
+    return Vector(x, y, z);
+}
+
 mpq_class Geometry::distanceSquared(Vector& v1, Vector& v2) {
 
     mpq_class xDiff = v1.getX() - v2.getX();

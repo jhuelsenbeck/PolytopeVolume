@@ -61,6 +61,32 @@ Plane::Plane(Vector& pt1, Vector& pt2, Vector& pt3) {
     this->d = (- a * x1 - b * y1 - c * z1);
 }
 
+bool Plane::operator==(const Plane& rhs) const {
+
+    if (this->a != rhs.a)
+        return false;
+    if (this->b != rhs.b)
+        return false;
+    if (this->c != rhs.c)
+        return false;
+    if (this->d != rhs.d)
+        return false;
+    return true;
+}
+
+bool Plane::operator<(const Plane& rhs) const {
+
+    if (this->a < rhs.a)
+        return true;
+    if (this->b < rhs.b)
+        return true;
+    if (this->c < rhs.c)
+        return true;
+    if (this->d < rhs.d)
+        return true;
+    return false;
+}
+
 mpf_class Plane::getDistance(Vector& point) {
 
     // Distance = (| a*x1 + b*y1 + c*z1 + d |) / (sqrt( a*a + b*b + c*c))
@@ -77,6 +103,14 @@ mpf_class Plane::getDistance(Vector& point) {
     mpf_class denom(dot, 1000);
     mpf_class distF = numer / sqrt(denom);
     return distF;
+}
+
+std::string Plane::getStr(void) {
+
+    std::string str = "(";
+    str += std::to_string(a.get_d()) + ", " + std::to_string(b.get_d()) + ", " + std::to_string(c.get_d()) + ", " + std::to_string(d.get_d());
+    str += ")";
+    return str;
 }
 
 void Plane::normal(Vector& n) {

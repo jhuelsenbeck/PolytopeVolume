@@ -16,6 +16,5 @@ Edge::Edge(Vertex* _v1, Vertex* _v2) : Line() {
     temp.z = v2->z - v1->z;
     setDirection( temp );
     dd = Geometry::distanceSquared(*v1, *v2);
-    //dd = v1->distanceSquared(*v2);
 }
 
