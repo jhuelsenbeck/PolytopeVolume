@@ -13,7 +13,7 @@
 
 namespace Geometry {
 
-    double      angle(Vector& a, Vector& b, Vector& c);
+    double      angle(Vector& a, Vector& b, Vector& c, Vector& n);
     Vector      centroid(std::vector<Vector*>& vecs);
     Vector      centroid(std::vector<Vertex*>& vecs);
     void        crossProduct(Vector& v1, Vector& v2, Vector& res);

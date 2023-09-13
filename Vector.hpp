@@ -13,6 +13,7 @@ class Vector {
                         Vector(mpq_class& xQ, mpq_class yQ, mpq_class zQ);
         bool            operator==(Vector& rhs);
         bool            operator!=(Vector& rhs);
+        Vector&         operator+=(Vector& rhs);
         Vector          cross(Vector& rhs);
         mpq_class       distanceSquared(const Vector& vec) const;
         mpq_class&      getX(void) { return x; }

@@ -3,6 +3,7 @@
 #include "Geometry.hpp"
 #include "Msg.hpp"
 #include "Polyhedral.hpp"
+#include "RandomVariable.hpp"
 #include "VertexFactory.hpp"
 
 
@@ -17,6 +18,121 @@ Polyhedral::Polyhedral(std::vector<mpq_class>& W) {
     wGT = W[5];
     
     initializePlanes();
+}
+
+mpq_class Polyhedral::facetArea(Vertex* first, Plane* pln) {
+
+    Vector unitNormal;
+    pln->normal(unitNormal);
+    unitNormal.normalize();
+
+    mpq_class normalLengthRational = (unitNormal.getX() * unitNormal.getX()) + (unitNormal.getY() * unitNormal.getY()) + (unitNormal.getZ() * unitNormal.getZ());
+    mpf_class normalLengthReal = normalLengthRational;
+    normalLengthReal = sqrt(normalLengthReal);
+    normalLengthRational = normalLengthReal;
+    mpq_class normalLengthInv = 1 / normalLengthRational;
+    mpq_class& x = unitNormal.getX();
+    mpq_class& y = unitNormal.getY();
+    mpq_class& z = unitNormal.getZ();
+    x *= normalLengthInv;
+    y *= normalLengthInv;
+    z *= normalLengthInv;
+
+    Vertex* v = first;
+    Vector sumCrossProducts;
+    Vector cross;
+    do
+        {
+        std::cout << v << " " << v->getTo() << std::endl;
+        Geometry::crossProduct(*v, *(v->getTo()), cross);
+        sumCrossProducts += cross;
+        v = v->getTo();
+        } while (v != first);
+    mpq_class dot = Geometry::dotProduct(unitNormal, sumCrossProducts);
+    if (dot < 0)
+        dot = -dot;
+    mpq_class facetArea = dot / 2;
+
+    return facetArea;
+}
+
+Vertex* Polyhedral::findOtherVertex(Vertex* from, std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> >& linesMap, Vertex* v, Plane* pln) {
+
+    for (auto lne : linesMap)
+        {
+        if (lne.first.first == pln || lne.first.second == pln)
+            {
+            bool inList = false;
+            for (int i=0, n=(int)lne.second.size(); i<n; i++)
+                {
+                if (lne.second[i] == v)
+                    {
+                    inList = true;
+                    break;
+                    }
+                }
+                
+            if (inList == true)
+                {
+                if (lne.second[0] != from && lne.second[1] != from)
+                    {
+                    if (v == lne.second[0])
+                        return lne.second[1];
+                    else
+                        return lne.second[0];
+                    }
+                }
+            
+            }
+        }
+    return nullptr;
+}
+
+void Polyhedral::initializeFacets(std::map<Plane*,std::vector<Vertex*>>& verticesMap, std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> >& linesMap) {
+
+    mpq_class oneHalf = 1;
+    oneHalf /= 2;
+    Vector center(oneHalf, oneHalf, oneHalf);
+    volume = 0.0;
+    for (auto pln : verticesMap)
+        {
+        mpf_class distance = pln.first->getDistance(center);
+
+        // clean vertices
+        for (int i=0, n=(int)pln.second.size(); i<n; i++)
+            {
+            pln.second[i]->setTo(nullptr);
+            pln.second[i]->setFrom(nullptr);
+            }
+            
+        // order the vertices
+        Vertex* first = pln.second[0];
+        Vertex* v = first;
+        do {
+            Vertex* nextV = findOtherVertex(v->getFrom(), linesMap, v, pln.first);
+            v->setTo(nextV);
+            nextV->setFrom(v);
+            v = nextV;
+            } while (v != first);
+        
+        // get the facet area
+        mpq_class facetBaseArea = facetArea(first, pln.first);
+        std::cout << pln.first << " -- ";
+        v = first;
+        do
+            {
+            std::cout << v << " -> ";
+            v = v->getTo();
+            } while (v != first);
+            
+        std::cout << " (" << facetBaseArea.get_d() << ", " << distance << ", ";
+        // calculate the pyramid volume
+        facetBaseArea /= 3;
+        mpf_class facetBaseAreaF = facetBaseArea;
+        volume += facetBaseAreaF * distance;
+        
+        std::cout << volume << ")" << std::endl;
+        }
 }
 
 void Polyhedral::initializePlanes(void) {
@@ -77,7 +193,8 @@ void Polyhedral::initializePlanes(void) {
     planes.push_back(yz2);
     
     VertexFactory& vf = VertexFactory::vertexFactoryInstance();
-    std::map<Plane*,std::vector<Vertex*>> verticesMap;
+    plain_vertex_map verticesMap;
+    line_vertex_map linesMap;
     for (int i=0, n1 = (int)planes.size(); i<n1; i++)
         {
         for (int j=i+1, n2 = (int)planes.size(); j<n2; j++)
@@ -91,7 +208,7 @@ void Polyhedral::initializePlanes(void) {
                     if (planesIntersect == true && isValid(*intersectionPoint) == true)
                         {
                         // add intersection Vector to planes map
-                        std::map<Plane*,std::vector<Vertex*> >::iterator it = verticesMap.find(&planes[i]);
+                        plain_vertex_map::iterator it = verticesMap.find(&planes[i]);
                         if (it == verticesMap.end())
                             {
                             std::vector<Vertex*> vec;
@@ -121,7 +238,12 @@ void Polyhedral::initializePlanes(void) {
                         else
                             it->second.push_back(intersectionPoint);
                             
+                            
+                        insertVertex(linesMap, &planes[i], &planes[j], *intersectionPoint);
+                        insertVertex(linesMap, &planes[i], &planes[k], *intersectionPoint);
+                        insertVertex(linesMap, &planes[j], &planes[k], *intersectionPoint);
                         }
+                        
                         
                     }
                 }
@@ -131,9 +253,9 @@ void Polyhedral::initializePlanes(void) {
     std::cout << "Planes" << std::endl;
     for (auto p : verticesMap)
         {
-        std::cout << p.first->getStr() << " -- ";
+        std::cout << p.first << " -- ";
         for (int i=0; i<p.second.size(); i++)
-            std::cout << p.second[i]->getStr()    << " ";
+            std::cout << p.second[i] << " ";
         std::cout << std::endl;
         }
         
@@ -142,323 +264,40 @@ void Polyhedral::initializePlanes(void) {
         {
         std::cout << p.first->getStr() << " -- " << p.second.size() << std::endl;
         }
+
+    std::cout << "Lines" << std::endl;
+    for (auto p : linesMap)
+        {
+        std::cout << p.first.first << " " << p.first.second << " -- ";
+        for (int i=0; i<p.second.size(); i++)
+            std::cout << p.second[i] << " ";
+        std::cout << std::endl;
+        }
         
     // set up facets
-    for (auto p : verticesMap)
-        {
-        Vector centroid = Geometry::centroid(p.second);
-        Vector* firstVec = p.second[0];
-        for (int i=0, n=(int)p.second.size(); i<n; i++)
-            {
-            double ang = Geometry::angle(centroid, *firstVec, *(p.second[i]));
-            std::cout << p.first << " " << centroid.getStr() << " " << ang << std::endl;
-            }
-        }
-    
-    
-    
-    
-    
-    
-    
-#   if 0
-    // set up facets
-    VertexFactory& vFactory = VertexFactory::vertexFactoryInstance();
-    for (std::map<Plane*,std::vector<Vertex*> >::iterator it = verticesMap.begin(); it != verticesMap.end(); it++)
-        {
-        // get the information for the plane
-        Plane* p = it->first;
-        std::vector<Vertex*> vertices;
-        for (size_t i=0, n=it->second.size(); i<n; i++)
-            vertices.push_back(vFactory.getVertex(it->second[i]));
-        std::vector<Line> planeLines;
-        std::map<Plane*,std::vector<Line> >::iterator lit = lines.find(p);
-        if (lit != lines.end())
-            planeLines = lit->second;
-        else
-            Msg::error("Couldn't find lines associated with plane");
-        
-        // configure vertices for each plane
-        for (Line x : planeLines)
-            {
-            // find all of the vertices for this line
-            std::vector<Vertex*> lineVertices;
-            for (int i=0; i<vertices.size(); i++)
-                {
-                mpq_class d = x.distanceToPoint(*vertices[i]);
-                if ( d == 0 )
-                    lineVertices.push_back(vertices[i]);
-                }
-            if (lineVertices.size() != 2)
-                Msg::error("There only be two vertices on this line, but we found " + std::to_string(lineVertices.size()));
-                
-            // link up the two vertices that were found
-            if (lineVertices[0]->getFrom() == NULL && lineVertices[1]->getTo() == NULL)
-                {
-                lineVertices[0]->setFrom(lineVertices[1]);
-                lineVertices[1]->setTo(lineVertices[0]);
-                }
-            else if (lineVertices[0]->getTo() == NULL && lineVertices[1]->getFrom() == NULL)
-                {
-                lineVertices[0]->setTo(lineVertices[1]);
-                lineVertices[1]->setFrom(lineVertices[0]);
-                }
-            else
-                Msg::error("Cannot find empty slots to hook up vertices");
-            }
-            
-        // check zero values on vertices
-        /*for (int i=0; i<vertices.size(); i++)
-            {
-            if (PolytopeMath::isZero(vertices[i]->x, 10e-10) == true)
-                vertices[i]->x = 0.0;
-            if (PolytopeMath::isZero(vertices[i]->y, 10e-10) == true)
-                vertices[i]->y = 0.0;
-            if (PolytopeMath::isZero(vertices[i]->z, 10e-10) == true)
-                vertices[i]->z = 0.0;
-            }*/ // TEMP: JPH 8/21/23 Is this necessary?
-            
-        // get polytope bounds
-        minX = vertices[0]->x;
-        minY = vertices[0]->y;
-        minZ = vertices[0]->z;
-        maxX = minX;
-        maxY = minY;
-        maxZ = minZ;
-        for (int i=1; i<vertices.size(); i++)
-            {
-            Vertex v = *vertices[i];
-            if (v.x < minX)
-                minX = v.x;
-            if (v.x > maxX)
-                maxX = v.x;
-            if (v.y < minY)
-                minY = v.y;
-            if (v.y > maxY)
-                maxY = v.y;
-            if (v.z < minZ)
-                minZ = v.z;
-            if (v.z > maxZ)
-                maxZ = v.z;
-            }
-        
-        // allocate the facet and add the vertices
-        Facet* f = new Facet(*p, vertices);
-        facets.push_back(f);
-        }
-        
-        
-#   endif
-        
-        
-        
-        
-        
-#   if 0
+    initializeFacets(verticesMap, linesMap);
+    double mcVolume = monteCarloVolume(100000);
+    std::cout << mcVolume << std::endl;
 
-    // check all (12 choose 3) combinations of planes, getting vertices for any that intersect
-    std::map<Plane*,std::vector<Vector> > verticesMap;
-    std::map<Plane*,std::vector<Line> > lines;
-    std::Vector<Vector> uniquePoints;
-    int n = 0;
-    for (int i=0; i<planes.size(); i++)
-        {
-        for (int j=i+1; j<planes.size(); j++)
-            {
-            for (int k=j+1; k<planes.size(); k++)
-                {
-                if (i != j && i != k && j != k)
-                    {
-                    n++;
-                   bool doPlanesIntersect = false;
-                    Vector pt = planes[i].intersect(planes[j], planes[k], doPlanesIntersect);
-                    if (doPlanesIntersect == true)
-                        {
-                        bool validVertex = checkVertex(pt, wAC, wAG, wAT, wCG, wCT, wGT);
-                        if (validVertex == true)
-                            {
-                            uniquePoints.push_back(pt);
-                            // add the vertex to all three planes
-                            std::map<Plane*,std::Vector<Vector> >::iterator it = verticesMap.find(&planes[i]);
-                            if (it != verticesMap.end())
-                                {
-                                it->second.push_back(pt);
-                                }
-                            else
-                                {
-                                std::Vector<Vector> v;
-                                v.push_back(pt);
-                                verticesMap.insert( std::make_pair(&planes[i], v) );
-                                }
-                            it = verticesMap.find(&planes[j]);
-                            if (it != verticesMap.end())
-                                {
-                                it->second.push_back(pt);
-                                }
-                            else
-                                {
-                                std::Vector<Vector> v;
-                                v.push_back(pt);
-                                verticesMap.insert( std::make_pair(&planes[j], v) );
-                                }
-                            it = verticesMap.find(&planes[k]);
-                            if (it != verticesMap.end())
-                                {
-                                it->second.push_back(pt);
-                                }
-                            else
-                                {
-                                std::Vector<Vector> v;
-                                v.push_back(pt);
-                                verticesMap.insert( std::make_pair(&planes[k], v) );
-                                }
-                                
-                            Line lineIJ = planes[i].intersect(planes[j]);
-                            Line lineIK = planes[i].intersect(planes[k]);
-                            Line lineJK = planes[j].intersect(planes[k]);
-                            std::map<Plane*,std::Vector<Line> >::iterator lit = lines.find(&planes[i]);
-                            if (lit != lines.end())
-                                {
-                                if (isLineInList(lineIJ, lit->second) == false)
-                                    lit->second.push_back(lineIJ);
-                                if (isLineInList(lineIK, lit->second) == false)
-                                    lit->second.push_back(lineIK);
-                                }
-                            else
-                                {
-                                std::Vector<Line> v;
-                                v.push_back(lineIJ);
-                                v.push_back(lineIK);
-                                lines.insert( std::make_pair(&planes[i], v) );
-                                }
-                            lit = lines.find(&planes[j]);
-                            if (lit != lines.end())
-                                {
-                                if (isLineInList(lineIJ, lit->second) == false)
-                                    lit->second.push_back(lineIJ);
-                                if (isLineInList(lineJK, lit->second) == false)
-                                    lit->second.push_back(lineJK);
-                                }
-                            else
-                                {
-                                std::Vector<Line> v;
-                                v.push_back(lineIJ);
-                                v.push_back(lineJK);
-                                lines.insert( std::make_pair(&planes[j], v) );
-                                }
-                            lit = lines.find(&planes[k]);
-                            if (lit != lines.end())
-                                {
-                                if (isLineInList(lineIK, lit->second) == false)
-                                    lit->second.push_back(lineIK);
-                                if (isLineInList(lineJK, lit->second) == false)
-                                    lit->second.push_back(lineJK);
-                                }
-                            else
-                                {
-                                std::Vector<Line> v;
-                                v.push_back(lineIK);
-                                v.push_back(lineJK);
-                                lines.insert( std::make_pair(&planes[k], v) );
-                                }
-                            }
-                        std::cout << n << " " << std::setw(3) << i << std::setw(3) << j << std::setw(3) << k << " -- " << pt << " " << validVertex << std::endl;
-                        }
-                    }
-                }
-            }
-        }
+}
 
+void Polyhedral::insertVertex(std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> >& linesMap, Plane* p1, Plane* p2, Vertex& v) {
 
-    // add the vertices to the Polyhedral
-    for (int i=0; i<uniquePoints.size(); i++)
-        vertices.push_back( new Vector(uniquePoints[i]) );
-
-    // set up facets
-    VertexFactory& vFactory = VertexFactory::vertexFactoryInstance();
-    for (std::map<Plane*,std::Vector<Vector> >::iterator it = verticesMap.begin(); it != verticesMap.end(); it++)
-        {
-        // get the information for the plane
-        Plane* p = it->first;
-        std::Vector<Vertex*> vertices;
-        for (int i=0; i<it->second.size(); i++)
-            vertices.push_back(vFactory.getVertex(it->second[i]));
-        std::Vector<Line> planeLines;
-        std::map<Plane*,std::Vector<Line> >::iterator lit = lines.find(p);
-        if (lit != lines.end())
-            planeLines = lit->second;
-        else
-            Msg::error("Couldn't find lines associated with plane");
+    std::pair<Plane*,Plane*> key(p1, p2);
+    if (p2 < p1)
+        key = std::make_pair(p2, p1);
         
-        // configure vertices for each plane
-        for (Line x : planeLines)
-            {
-            // find all of the vertices for this line
-            std::Vector<Vertex*> lineVertices;
-            for (int i=0; i<vertices.size(); i++)
-                {
-                double d = x.distanceToPoint(*vertices[i]);
-                if ( d < 10e-8 )
-                    lineVertices.push_back(vertices[i]);
-                }
-            if (lineVertices.size() != 2)
-                Msg::error("There only be two vertices on this line, but we found " + std::to_string(lineVertices.size()));
-                
-            // link up the two vertices that were found
-            if (lineVertices[0]->getFrom() == NULL && lineVertices[1]->getTo() == NULL)
-                {
-                lineVertices[0]->setFrom(lineVertices[1]);
-                lineVertices[1]->setTo(lineVertices[0]);
-                }
-            else if (lineVertices[0]->getTo() == NULL && lineVertices[1]->getFrom() == NULL)
-                {
-                lineVertices[0]->setTo(lineVertices[1]);
-                lineVertices[1]->setFrom(lineVertices[0]);
-                }
-            else
-                Msg::error("Cannot find empty slots to hook up vertices");
-            }
-            
-        // check zero values on vertices
-        /*for (int i=0; i<vertices.size(); i++)
-            {
-            if (PolytopeMath::isZero(vertices[i]->x, 10e-10) == true)
-                vertices[i]->x = 0.0;
-            if (PolytopeMath::isZero(vertices[i]->y, 10e-10) == true)
-                vertices[i]->y = 0.0;
-            if (PolytopeMath::isZero(vertices[i]->z, 10e-10) == true)
-                vertices[i]->z = 0.0;
-            }*/ // TEMP: JPH 8/21/23 Is this necessary?
-            
-        // get polytope bounds
-        minX = vertices[0]->x;
-        minY = vertices[0]->y;
-        minZ = vertices[0]->z;
-        maxX = minX;
-        maxY = minY;
-        maxZ = minZ;
-        for (int i=1; i<vertices.size(); i++)
-            {
-            Vertex v = *vertices[i];
-            if (v.x < minX)
-                minX = v.x;
-            if (v.x > maxX)
-                maxX = v.x;
-            if (v.y < minY)
-                minY = v.y;
-            if (v.y > maxY)
-                maxY = v.y;
-            if (v.z < minZ)
-                minZ = v.z;
-            if (v.z > maxZ)
-                maxZ = v.z;
-            }
-        
-        // allocate the facet and add the vertices
-        Facet* f = new Facet(*p, vertices);
-        facets.push_back(f);
+    std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> >::iterator it = linesMap.find(key);
+    if (it == linesMap.end())
+        {
+        std::vector<Vertex*> vec;
+        vec.push_back(&v);
+        linesMap.insert( std::make_pair(key,vec) );
         }
-#   endif
+    else
+        {
+        it->second.push_back(&v);
+        }
 }
 
 bool Polyhedral::isLineInList(Line& x, std::vector<Line>& lines) {
@@ -509,4 +348,22 @@ bool Polyhedral::isValid(Vector& pt) {
         return false;
         
     return true;
+}
+
+double Polyhedral::monteCarloVolume(int numberReplicates) {
+
+    RandomVariable& rng = RandomVariable::randomVariableInstance();
+    int numberInPolytope = 0;
+    for (int i=0; i<numberReplicates; i++)
+        {
+        double u1 = rng.uniformRv();
+        double u2 = rng.uniformRv();
+        double u3 = rng.uniformRv();
+        Vector pt(u1, u2, u3);
+        //bool validVertex = checkVertex(pt, wAC, wAG, wAT, wCG, wCT, wGT);
+        bool validVertex = isValid(pt);
+        if (validVertex == true)
+            numberInPolytope++;
+        }
+    return (double)numberInPolytope / numberReplicates;
 }

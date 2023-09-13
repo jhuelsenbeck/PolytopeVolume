@@ -119,3 +119,7 @@ void Plane::normal(Vector& n) {
     n.y = b;
     n.z = c;
 }
+
+void Plane::normalize(void) {
+
+}

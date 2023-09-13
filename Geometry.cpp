@@ -2,15 +2,15 @@
 
 
 
-double Geometry::angle(Vector& a, Vector& b, Vector& c) {
+double Geometry::angle(Vector& a, Vector& b, Vector& c, Vector& n) {
 
-    mpq_class x = a.getX() - b.getX();
-    mpq_class y = a.getY() - b.getY();
-    mpq_class z = a.getZ() - b.getZ();
+    mpq_class x = b.getX() - a.getX();
+    mpq_class y = b.getY() - a.getY();
+    mpq_class z = b.getZ() - a.getZ();
     Vector ab(x, y, z);
-    x = a.getX() - c.getX();
-    y = a.getY() - c.getY();
-    z = a.getZ() - c.getZ();
+    x = c.getX() - a.getX();
+    y = c.getY() - a.getY();
+    z = c.getZ() - a.getZ();
     Vector ac(x, y, z);
     
     // return angle between [0, 180]

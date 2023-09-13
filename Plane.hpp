@@ -19,6 +19,7 @@ class Plane {
         mpf_class       getDistance(Vector& point);
         std::string     getStr(void);
         void            normal(Vector& n);
+        void            normalize(void);
     
     private:
         mpq_class       a;

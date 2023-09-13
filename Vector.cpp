@@ -46,6 +46,12 @@ bool Vector::operator!=(Vector& rhs) {
     return !(*this == rhs);
 }
 
+Vector& Vector::operator+=(Vector& rhs) {
+
+    x += rhs.x; y += rhs.y; z += rhs.z;
+    return *this;
+}
+
 Vector Vector::cross(Vector& rhs) {
 
     // return Vector(y*rhs.z - z*rhs.y, z*rhs.x - x*rhs.z, x*rhs.y - y*rhs.x)
