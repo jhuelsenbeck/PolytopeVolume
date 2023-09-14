@@ -20,6 +20,7 @@ class Plane {
         std::string     getStr(void);
         void            normal(Vector& n);
         void            normalize(void);
+        void            set(Vector pt1, Vector pt2, Vector pt3);
     
     private:
         mpq_class       a;

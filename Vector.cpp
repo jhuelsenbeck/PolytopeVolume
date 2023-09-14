@@ -105,3 +105,10 @@ void Vector::normalize(void) {
     z *= invLengthQ;
     //return *this;
 }
+
+void Vector::set(mpq_class& xQ, mpq_class& yQ, mpq_class& zQ) {
+
+    x = xQ;
+    y = yQ;
+    z = zQ;
+}

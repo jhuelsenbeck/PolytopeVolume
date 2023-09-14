@@ -17,7 +17,9 @@ class VertexFactory {
         Vertex*                 getVertex(void);
         Vertex*                 getVertex(Vertex& v);
         Vertex*                 getVertex(Vector& v);
+        int                     getNumAllocated(void) { return (int)allocatedVertices.size(); }
         void                    returnToPool(Vertex* nde);
+        void                    recallAllVertices(void);
 
     private:
                                 VertexFactory(void);
@@ -26,6 +28,7 @@ class VertexFactory {
                                ~VertexFactory(void);
         std::vector<Vertex*>    vertexPool;
         std::set<Vertex*>       allocatedVertices;
+        std::set<Vertex*>       onLoan;
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include <gmpxx.h>
+#include <iomanip>
 #include <iostream>
 #include <vector>
 #include "Polyhedral.hpp"
@@ -6,18 +7,26 @@
 #include "RandomVariable.hpp"
 #include "Test.hpp"
 
+#define MIN_FREQ    10e-10
+
 std::vector<mpq_class> initializeRateMatrix(void);
 
 
 
 int main(int argc, const char* argv[]) {
 
-    // get the weights from the prior
-    std::vector<mpq_class> W = initializeRateMatrix();
+    Polyhedral poly;
 
-    Polyhedral poly(W);
-    
-    
+    for (int i=0; i<100000; i++)
+        {
+        std::vector<mpq_class> W = initializeRateMatrix();
+        poly.setWeights(W);
+        mpf_class v = poly.getVolume();
+        std::cout << std::fixed << std::scientific << std::setprecision(10);
+        std::cout << i+1 << " -- Exact Volume: " << v;
+        std::cout << std::fixed << std::setprecision(5);
+        std::cout << " " << log(v.get_d()) << std::endl;
+        }
     
     return 0;
 }
@@ -27,11 +36,33 @@ std::vector<mpq_class> initializeRateMatrix(void) {
     // randomly initialize parameters of the GTR model
     std::vector<double> f(4);
     std::vector<double> r(6);
-    std::vector<double> alpha4(4, 1.0);
+    std::vector<double> alpha4(4, 0.1);
     std::vector<double> alpha6(6, 1.0);
     RandomVariable& rng = RandomVariable::randomVariableInstance();
     Probability::Dirichlet::rv(&rng, alpha4, f);
     Probability::Dirichlet::rv(&rng, alpha6, r);
+    
+    // check bounds
+    for (int i=0; i<4; i++)
+        {
+        if (f[i] < MIN_FREQ)
+            f[i] = MIN_FREQ;
+        }
+    for (int i=0; i<6; i++)
+        {
+        if (r[i] < MIN_FREQ)
+            r[i] = MIN_FREQ;
+        }
+    double sumD = 0.0;
+    for (int i=0; i<4; i++)
+        sumD += f[i];
+    for (int i=0; i<4; i++)
+        f[i] /= sumD;
+    sumD = 0.0;
+    for (int i=0; i<6; i++)
+        sumD += r[i];
+    for (int i=0; i<6; i++)
+        r[i] /= sumD;
     
     // set the rate matrix
     double Q[4][4];
@@ -73,38 +104,29 @@ std::vector<mpq_class> initializeRateMatrix(void) {
         }
                 
     // move the weights to GMP rational numbers
-    mpq_t s, oneHalf;
-    mpq_inits(s, oneHalf, NULL);
-    mpq_set_d(s, 0.0);
-    mpq_set_d(oneHalf, 0.5);
+    mpq_class s;
+    mpq_class oneHalf;
+    oneHalf = 1;
+    oneHalf /= 2;
     std::vector<mpq_class> W;
     for (int i=0; i<5; i++)
         {
         mpq_class x(w[i]);
-        x.canonicalize();
         W.push_back(x);
-        
-        mpq_t x2;
-        mpq_init(x2);
-        mpq_set_d(x2, w[i]);
-        mpq_add(s, x2, s);
+        s += x;
         }
-    mpq_t wGT;
-    mpq_init(wGT);
-    mpq_sub(wGT, oneHalf, s);
-    mpq_add(s, wGT, s);
-    mpq_class x(wGT);
-    W.push_back(x);
+        
+    mpq_class wGT;
+    wGT = oneHalf - s;
+    W.push_back(wGT);
 
-    mpq_clears(s, oneHalf, wGT, NULL);
-
-#   if 1
+#   if 0
     mpq_t sum;
     mpq_init(sum);
     mpq_set_d(sum, 0.0);
     for (int i=0; i<6; i++)
         {
-        std::cout << "W[" << i << "] = " << W[i] << " " << W[i].get_d() << std::endl;
+        std::cout << "W[" << i << "] = " << W[i] << " " << W[i].get_d() << " " << w[i] << std::endl;
         mpq_add(sum, W[i].get_mpq_t(), sum);
         }
     std::cout << "W[ ] = " << sum << std::endl;

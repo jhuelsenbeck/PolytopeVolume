@@ -22,6 +22,7 @@ class Vector {
         std::string     getStr(void);
         double          length(void);
         void            normalize(void);
+        void            set(mpq_class& xQ, mpq_class& yQ, mpq_class& zQ);
         void            setX(mpq_class& xQ) { x = xQ; }
         void            setY(mpq_class& yQ) { y = yQ; }
         void            setZ(mpq_class& zQ) { z = zQ; }

@@ -9,7 +9,6 @@
 namespace CodeTest {
 
     bool testAll(void);
-    bool testLine(std::vector<std::string>& errors);
     bool testVector(std::vector<std::string>& errors);
     bool testVertex(std::vector<std::string>& errors);
 };

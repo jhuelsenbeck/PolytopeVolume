@@ -52,17 +52,30 @@ Vertex* VertexFactory::getVertex(void) {
            do not need to add it to the pool. */
         Vertex* v = new Vertex;
         allocatedVertices.insert( v );
+        onLoan.insert(v);
         return v;
         }
     
     // Return a node from the node pool, remembering to remove it from the pool.
     Vertex* v = vertexPool.back();
     vertexPool.pop_back();
+    onLoan.insert(v);
     return v;
+}
+
+void VertexFactory::recallAllVertices(void) {
+
+    for (Vertex* v : onLoan)
+        {
+        v->clean();
+        vertexPool.push_back(v);
+        }
+    onLoan.clear();
 }
 
 void VertexFactory::returnToPool(Vertex* v) {
 
     v->clean();
     vertexPool.push_back( v );
+    onLoan.erase(v);
 }

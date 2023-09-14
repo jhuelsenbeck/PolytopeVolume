@@ -1,7 +1,6 @@
 #ifndef Edge_H
 #define Edge_H
 
-#include "Line.hpp"
 #include "Vector.hpp"
 #include "Vertex.hpp"
 

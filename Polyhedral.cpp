@@ -7,17 +7,39 @@
 #include "VertexFactory.hpp"
 
 
-Polyhedral::Polyhedral(std::vector<mpq_class>& W) {
+Polyhedral::Polyhedral(void) {
 
-    // extract symbols from W
-    wAC = W[0];
-    wAG = W[1];
-    wAT = W[2];
-    wCG = W[3];
-    wCT = W[4];
-    wGT = W[5];
+    zeroQ = 0;
+    oneQ = 1;
+    oneHalfQ = 1;
+    oneHalfQ /= 2;
+    twoQ = 2;
+
+    center.setX(oneHalfQ);
+    center.setY(oneHalfQ);
+    center.setZ(oneHalfQ);
+
+    front.set( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ,  oneQ, zeroQ), Vector( oneQ,  oneQ, zeroQ) );
+    back.set( Vector(zeroQ, zeroQ,  oneQ), Vector(zeroQ,  oneQ,  oneQ), Vector( oneQ,  oneQ,  oneQ) );
+    top.set( Vector(zeroQ,  oneQ, zeroQ), Vector(zeroQ,  oneQ,  oneQ), Vector( oneQ,  oneQ,  oneQ) );
+    bottom.set( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ, zeroQ,  oneQ), Vector( oneQ, zeroQ,  oneQ) );
+    left.set( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ,  oneQ, zeroQ), Vector(zeroQ,  oneQ,  oneQ) );
+    right.set( Vector( oneQ, zeroQ, zeroQ), Vector( oneQ,  oneQ, zeroQ), Vector( oneQ,  oneQ,  oneQ) );
+
+    planes.push_back(&front);
+    planes.push_back(&back);
+    planes.push_back(&top);
+    planes.push_back(&bottom);
+    planes.push_back(&left);
+    planes.push_back(&right);
+    planes.push_back(&xz1);
+    planes.push_back(&xz2);
+    planes.push_back(&xy1);
+    planes.push_back(&xy2);
+    planes.push_back(&yz1);
+    planes.push_back(&yz2);
     
-    initializePlanes();
+    volume = 0.0;
 }
 
 mpq_class Polyhedral::facetArea(Vertex* first, Plane* pln) {
@@ -43,7 +65,6 @@ mpq_class Polyhedral::facetArea(Vertex* first, Plane* pln) {
     Vector cross;
     do
         {
-        std::cout << v << " " << v->getTo() << std::endl;
         Geometry::crossProduct(*v, *(v->getTo()), cross);
         sumCrossProducts += cross;
         v = v->getTo();
@@ -88,11 +109,8 @@ Vertex* Polyhedral::findOtherVertex(Vertex* from, std::map< std::pair<Plane*,Pla
     return nullptr;
 }
 
-void Polyhedral::initializeFacets(std::map<Plane*,std::vector<Vertex*>>& verticesMap, std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> >& linesMap) {
+void Polyhedral::initializeFacets(plain_vertex_map& verticesMap, line_vertex_map& linesMap) {
 
-    mpq_class oneHalf = 1;
-    oneHalf /= 2;
-    Vector center(oneHalf, oneHalf, oneHalf);
     volume = 0.0;
     for (auto pln : verticesMap)
         {
@@ -117,21 +135,11 @@ void Polyhedral::initializeFacets(std::map<Plane*,std::vector<Vertex*>>& vertice
         
         // get the facet area
         mpq_class facetBaseArea = facetArea(first, pln.first);
-        std::cout << pln.first << " -- ";
-        v = first;
-        do
-            {
-            std::cout << v << " -> ";
-            v = v->getTo();
-            } while (v != first);
-            
-        std::cout << " (" << facetBaseArea.get_d() << ", " << distance << ", ";
+                
         // calculate the pyramid volume
         facetBaseArea /= 3;
         mpf_class facetBaseAreaF = facetBaseArea;
         volume += facetBaseAreaF * distance;
-        
-        std::cout << volume << ")" << std::endl;
         }
 }
 
@@ -144,53 +152,47 @@ void Polyhedral::initializePlanes(void) {
     // u2 -> (-wAC + wCG - 2.0 * u1 * wCG + wCT) / (2.0 * wCT)   min in x,y
     // u3 -> (-wAT + wCT - 2.0 * u2 * wCT + wGT) / (2.0 * wGT)   max in y,z
     // u3 -> ( wAT + wCT - 2.0 * u2 * wCT + wGT) / (2.0 * wGT)   min in y,z
-    
-    mpq_class zeroQ = 0;
-    mpq_class oneQ  = 1;
-    mpq_class twoQ  = 2;
-    
-    mpq_class xzMaxA = (-wAG + wCG - wGT + twoQ * zeroQ * wGT) / (twoQ * wCG);
-    mpq_class xzMaxB = (-wAG + wCG - wGT + twoQ * oneQ  * wGT) / (twoQ * wCG);
-    mpq_class xzMinA = ( wAG + wCG - wGT + twoQ * zeroQ * wGT) / (twoQ * wCG);
-    mpq_class xzMinB = ( wAG + wCG - wGT + twoQ * oneQ  * wGT) / (twoQ * wCG);
-    
-    mpq_class xyMaxA = (-wAC + wCG - twoQ * zeroQ * wCG + wCT) / (twoQ * wCT);
-    mpq_class xyMaxB = (-wAC + wCG - twoQ * oneQ  * wCG + wCT) / (twoQ * wCT);
-    mpq_class xyMinA = ( wAC + wCG - twoQ * zeroQ * wCG + wCT) / (twoQ * wCT);
-    mpq_class xyMinB = ( wAC + wCG - twoQ * oneQ  * wCG + wCT) / (twoQ * wCT);
-    
-    mpq_class yzMaxA = (-wAT + wCT - twoQ * zeroQ * wCT + wGT) / (twoQ * wGT);
-    mpq_class yzMaxB = (-wAT + wCT - twoQ * oneQ  * wCT + wGT) / (twoQ * wGT);
-    mpq_class yzMinA = ( wAT + wCT - twoQ * zeroQ * wCT + wGT) / (twoQ * wGT);
-    mpq_class yzMinB = ( wAT + wCT - twoQ * oneQ  * wCT + wGT) / (twoQ * wGT);
-            
-    Plane xz1 = Plane( Vector(xzMaxA, zeroQ, zeroQ), Vector(xzMaxB, zeroQ, oneQ), Vector(xzMaxA, oneQ, zeroQ) );
-    Plane xz2 = Plane( Vector(xzMinA, zeroQ, zeroQ), Vector(xzMinB, zeroQ, oneQ), Vector(xzMinA, oneQ, zeroQ) );
-    Plane xy1 = Plane( Vector(zeroQ, xyMaxA, zeroQ), Vector(oneQ, xyMaxB, zeroQ), Vector(zeroQ, xyMaxA, oneQ) );
-    Plane xy2 = Plane( Vector(zeroQ, xyMinA, zeroQ), Vector(oneQ, xyMinB, zeroQ), Vector(zeroQ, xyMinA, oneQ) );
-    Plane yz1 = Plane( Vector(zeroQ, zeroQ, yzMaxA), Vector(zeroQ, oneQ, yzMaxB), Vector(oneQ, zeroQ, yzMaxA) );
-    Plane yz2 = Plane( Vector(zeroQ, zeroQ, yzMinA), Vector(zeroQ, oneQ, yzMinB), Vector(oneQ, zeroQ, yzMinA) );
+        
+    xzMaxA = (-wAG + wCG - wGT + twoQ * zeroQ * wGT) / (twoQ * wCG);
+    xzMaxB = (-wAG + wCG - wGT + twoQ * oneQ  * wGT) / (twoQ * wCG);
+    xzMinA = ( wAG + wCG - wGT + twoQ * zeroQ * wGT) / (twoQ * wCG);
+    xzMinB = ( wAG + wCG - wGT + twoQ * oneQ  * wGT) / (twoQ * wCG);
 
-    Plane front  = Plane( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ,  oneQ, zeroQ), Vector( oneQ,  oneQ, zeroQ) );
-    Plane back   = Plane( Vector(zeroQ, zeroQ,  oneQ), Vector(zeroQ,  oneQ,  oneQ), Vector( oneQ,  oneQ,  oneQ) );
-    Plane top    = Plane( Vector(zeroQ,  oneQ, zeroQ), Vector(zeroQ,  oneQ,  oneQ), Vector( oneQ,  oneQ,  oneQ) );
-    Plane bottom = Plane( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ, zeroQ,  oneQ), Vector( oneQ, zeroQ,  oneQ) );
-    Plane left   = Plane( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ,  oneQ, zeroQ), Vector(zeroQ,  oneQ,  oneQ) );
-    Plane right  = Plane( Vector( oneQ, zeroQ, zeroQ), Vector( oneQ,  oneQ, zeroQ), Vector( oneQ,  oneQ,  oneQ) );
+    xyMaxA = (-wAC + wCG - twoQ * zeroQ * wCG + wCT) / (twoQ * wCT);
+    xyMaxB = (-wAC + wCG - twoQ * oneQ  * wCG + wCT) / (twoQ * wCT);
+    xyMinA = ( wAC + wCG - twoQ * zeroQ * wCG + wCT) / (twoQ * wCT);
+    xyMinB = ( wAC + wCG - twoQ * oneQ  * wCG + wCT) / (twoQ * wCT);
 
-    std::vector<Plane> planes;
-    planes.push_back(front);
-    planes.push_back(back);
-    planes.push_back(top);
-    planes.push_back(bottom);
-    planes.push_back(left);
-    planes.push_back(right);
-    planes.push_back(xz1);
-    planes.push_back(xz2);
-    planes.push_back(xy1);
-    planes.push_back(xy2);
-    planes.push_back(yz1);
-    planes.push_back(yz2);
+    yzMaxA = (-wAT + wCT - twoQ * zeroQ * wCT + wGT) / (twoQ * wGT);
+    yzMaxB = (-wAT + wCT - twoQ * oneQ  * wCT + wGT) / (twoQ * wGT);
+    yzMinA = ( wAT + wCT - twoQ * zeroQ * wCT + wGT) / (twoQ * wGT);
+    yzMinB = ( wAT + wCT - twoQ * oneQ  * wCT + wGT) / (twoQ * wGT);
+
+    xzMaxA_Zero_Zero.set(xzMaxA, zeroQ, zeroQ); // Vector(xzMaxA, zeroQ, zeroQ)
+    xzMinA_Zero_Zero.set(xzMinA, zeroQ, zeroQ); // Vector(xzMinA, zeroQ, zeroQ)
+    xzMaxA_One_Zero.set(xzMaxA, oneQ, zeroQ);   // Vector(xzMaxA,  oneQ, zeroQ)
+    xzMinA_One_Zero.set(xzMinA, oneQ, zeroQ);   // Vector(xzMinA,  oneQ, zeroQ)
+    xzMaxB_Zero_One.set(xzMaxB, zeroQ, oneQ);   // Vector(xzMaxB, zeroQ,  oneQ)
+    xzMinB_Zero_One.set(xzMinB, zeroQ, oneQ);   // Vector(xzMinB, zeroQ,  oneQ)
+    zero_xyMaxA_Zero.set(zeroQ, xyMaxA, zeroQ); // Vector(zeroQ, xyMaxA, zeroQ)
+    zero_xyMinA_Zero.set(zeroQ, xyMinA, zeroQ); // Vector(zeroQ, xyMinA, zeroQ)
+    one_xyMaxB_Zero.set(oneQ, xyMaxB, zeroQ);   // Vector(oneQ, xyMaxB, zeroQ)
+    one_xyMinB_Zero.set(oneQ, xyMinB, zeroQ);   // Vector(oneQ, xyMinB, zeroQ)
+    zero_xyMaxA_One.set(zeroQ, xyMaxA, oneQ);   // Vector(zeroQ, xyMaxA, oneQ)
+    zero_xyMinA_One.set(zeroQ, xyMinA, oneQ);   // Vector(zeroQ, xyMinA, oneQ)
+    zero_Zero_yzMaxA.set(zeroQ, zeroQ, yzMaxA); // Vector(zeroQ, zeroQ, yzMaxA)
+    zero_Zero_yzMinA.set(zeroQ, zeroQ, yzMinA); // Vector(zeroQ, zeroQ, yzMinA)
+    zero_One_yzMaxB.set(zeroQ, oneQ, yzMaxB);   // Vector(zeroQ, oneQ, yzMaxB)
+    zero_One_yzMinB.set(zeroQ, oneQ, yzMinB);   // Vector(zeroQ, oneQ, yzMinB)
+    one_Zero_yzMaxA.set(oneQ, zeroQ, yzMaxA);   // Vector(oneQ, zeroQ, yzMaxA)
+    one_Zero_yzMinA.set(oneQ, zeroQ, yzMinA);   // Vector(oneQ, zeroQ, yzMinA)
+
+    xz1.set( xzMaxA_Zero_Zero, xzMaxB_Zero_One, xzMaxA_One_Zero );
+    xz2.set( xzMinA_Zero_Zero, xzMinB_Zero_One, xzMinA_One_Zero );
+    xy1.set( zero_xyMaxA_Zero, one_xyMaxB_Zero, zero_xyMaxA_One );
+    xy2.set( zero_xyMinA_Zero, one_xyMinB_Zero, zero_xyMinA_One );
+    yz1.set( zero_Zero_yzMaxA, zero_One_yzMaxB, one_Zero_yzMaxA );
+    yz2.set( zero_Zero_yzMinA, zero_One_yzMinB, one_Zero_yzMinA );
     
     VertexFactory& vf = VertexFactory::vertexFactoryInstance();
     plain_vertex_map verticesMap;
@@ -204,44 +206,44 @@ void Polyhedral::initializePlanes(void) {
                 if (i != j && i != k && j != k)
                     {
                     Vertex* intersectionPoint = vf.getVertex();
-                    bool planesIntersect = Geometry::intersect(planes[i], planes[j], planes[k], *intersectionPoint);
+                    bool planesIntersect = Geometry::intersect(*planes[i], *planes[j], *planes[k], *intersectionPoint);
                     if (planesIntersect == true && isValid(*intersectionPoint) == true)
                         {
                         // add intersection Vector to planes map
-                        plain_vertex_map::iterator it = verticesMap.find(&planes[i]);
+                        plain_vertex_map::iterator it = verticesMap.find(planes[i]);
                         if (it == verticesMap.end())
                             {
                             std::vector<Vertex*> vec;
                             vec.push_back(intersectionPoint);
-                            verticesMap.insert( std::make_pair(&planes[i],vec) );
+                            verticesMap.insert( std::make_pair(planes[i],vec) );
                             }
                         else
                             it->second.push_back(intersectionPoint);
 
-                        it = verticesMap.find(&planes[j]);
+                        it = verticesMap.find(planes[j]);
                         if (it == verticesMap.end())
                             {
                             std::vector<Vertex*> vec;
                             vec.push_back(intersectionPoint);
-                            verticesMap.insert( std::make_pair(&planes[j],vec) );
+                            verticesMap.insert( std::make_pair(planes[j],vec) );
                             }
                         else
                             it->second.push_back(intersectionPoint);
 
-                        it = verticesMap.find(&planes[k]);
+                        it = verticesMap.find(planes[k]);
                         if (it == verticesMap.end())
                             {
                             std::vector<Vertex*> vec;
                             vec.push_back(intersectionPoint);
-                            verticesMap.insert( std::make_pair(&planes[k],vec) );
+                            verticesMap.insert( std::make_pair(planes[k],vec) );
                             }
                         else
                             it->second.push_back(intersectionPoint);
                             
                             
-                        insertVertex(linesMap, &planes[i], &planes[j], *intersectionPoint);
-                        insertVertex(linesMap, &planes[i], &planes[k], *intersectionPoint);
-                        insertVertex(linesMap, &planes[j], &planes[k], *intersectionPoint);
+                        insertVertex(linesMap, planes[i], planes[j], intersectionPoint);
+                        insertVertex(linesMap, planes[i], planes[k], intersectionPoint);
+                        insertVertex(linesMap, planes[j], planes[k], intersectionPoint);
                         }
                         
                         
@@ -249,65 +251,31 @@ void Polyhedral::initializePlanes(void) {
                 }
             }
         }
-
-    std::cout << "Planes" << std::endl;
-    for (auto p : verticesMap)
-        {
-        std::cout << p.first << " -- ";
-        for (int i=0; i<p.second.size(); i++)
-            std::cout << p.second[i] << " ";
-        std::cout << std::endl;
-        }
-        
-    std::cout << "Planes count (" << verticesMap.size() << "):" << std::endl;
-    for (auto p : verticesMap)
-        {
-        std::cout << p.first->getStr() << " -- " << p.second.size() << std::endl;
-        }
-
-    std::cout << "Lines" << std::endl;
-    for (auto p : linesMap)
-        {
-        std::cout << p.first.first << " " << p.first.second << " -- ";
-        for (int i=0; i<p.second.size(); i++)
-            std::cout << p.second[i] << " ";
-        std::cout << std::endl;
-        }
         
     // set up facets
     initializeFacets(verticesMap, linesMap);
-    double mcVolume = monteCarloVolume(100000);
-    std::cout << mcVolume << std::endl;
-
+    
+    // clean up
+    vf.recallAllVertices();
 }
 
-void Polyhedral::insertVertex(std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> >& linesMap, Plane* p1, Plane* p2, Vertex& v) {
+void Polyhedral::insertVertex(line_vertex_map& linesMap, Plane* p1, Plane* p2, Vertex* v) {
 
     std::pair<Plane*,Plane*> key(p1, p2);
     if (p2 < p1)
         key = std::make_pair(p2, p1);
         
-    std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> >::iterator it = linesMap.find(key);
+    line_vertex_map::iterator it = linesMap.find(key);
     if (it == linesMap.end())
         {
         std::vector<Vertex*> vec;
-        vec.push_back(&v);
+        vec.push_back(v);
         linesMap.insert( std::make_pair(key,vec) );
         }
     else
         {
-        it->second.push_back(&v);
+        it->second.push_back(v);
         }
-}
-
-bool Polyhedral::isLineInList(Line& x, std::vector<Line>& lines) {
-
-    for (int i=0; i<lines.size(); i++)
-        {
-        if (x == lines[i])
-            return true;
-        }
-    return false;
 }
 
 bool Polyhedral::isValid(Vector& pt) {
@@ -366,4 +334,17 @@ double Polyhedral::monteCarloVolume(int numberReplicates) {
             numberInPolytope++;
         }
     return (double)numberInPolytope / numberReplicates;
+}
+
+void Polyhedral::setWeights(std::vector<mpq_class>& W) {
+
+    // extract symbols from W
+    wAC = W[0];
+    wAG = W[1];
+    wAT = W[2];
+    wCG = W[3];
+    wCT = W[4];
+    wGT = W[5];
+    
+    initializePlanes();
 }
