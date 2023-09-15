@@ -4,6 +4,7 @@
 #include <map>
 #include <vector>
 #include <gmpxx.h>
+#include <string>
 #include "Geometry.hpp"
 #include "Plane.hpp"
 class Facet;
@@ -11,7 +12,7 @@ class Vector;
 class Vertex;
 
 
-typedef std::map<Plane*,std::vector<Vertex*>> plain_vertex_map;
+typedef std::map<Plane*,std::vector<Vertex*>> plane_vertex_map;
 typedef std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*>> line_vertex_map;
 
 
@@ -22,18 +23,23 @@ class Polyhedral {
     public:
                             Polyhedral(void);
                             Polyhedral(const Polyhedral& p) = delete;
+        void                computeMathematicaOutput(void) { formatForMathematica = true; }
+        std::string         getMathematicaOutput(void) { return mathematicaString; }
         double              monteCarloVolume(int numberReplicates);
         mpf_class           volume(std::vector<mpq_class>& W);
         mpf_class           volume(std::vector<mpq_class>& W, Vector& pt);
     
     private:
+        void                calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpf_class& d, mpf_class& vol);
         mpq_class           facetArea(Vertex* first, Plane* pln);
-        Vertex*             findOtherVertex(Vertex* from, line_vertex_map& linesMap, Vertex* v, Plane* pln);
-        void                initializeFacets(plain_vertex_map& verticesMap, line_vertex_map& linesMap);
+        Vertex*             findOtherVertex(Vertex* from, Vertex* v, Plane* pln);
+        void                initializeFacets(void);
         void                initializePlanes(void);
-        void                insertVertex(line_vertex_map& linesMap, Plane* p1, Plane* p2, Vertex* v);
+        void                insertVertex(Plane* p1, Plane* p2, Vertex* v);
         bool                isValid(Vector& pt);
         void                samplePolytope(Vector& pt);
+        void                sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d);
+        void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt);
         void                setWeights(std::vector<mpq_class>& W);
         
         mpq_class           wAC;
@@ -105,10 +111,16 @@ class Polyhedral {
         Plane               yz2;
 
         std::vector<Plane*> planes;
-        plain_vertex_map    verticesMap;
+        plane_vertex_map    verticesMap;
         line_vertex_map     linesMap;
+        
+        bool                formatForMathematica;
+        std::string         mathematicaString;
 
-        bool                computeExtrema;
+        bool                randomlySample;
+        std::map<Vector*,mpf_class>   tetrahedra;
+        Vector              randomPoint;
+        
         mpf_class           polytopeVolume;
 };
 

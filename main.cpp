@@ -22,6 +22,8 @@ int main(int argc, const char* argv[]) {
         {
         std::vector<mpq_class> W = initializeRateMatrix();
         mpf_class v = poly.volume(W, randomPoint);
+        std::string str = poly.getMathematicaOutput();
+        std::cout << str << std::endl;
         if ( (i+1) % 1 == 0)
             {
             std::cout << std::fixed << std::scientific << std::setprecision(10);
@@ -40,7 +42,7 @@ std::vector<mpq_class> initializeRateMatrix(void) {
     std::vector<double> f(4);
     std::vector<double> r(6);
     std::vector<double> alpha4(4, 10.0);
-    std::vector<double> alpha6(6, 0.1);
+    std::vector<double> alpha6(6, 1.0);
     RandomVariable& rng = RandomVariable::randomVariableInstance();
     Probability::Dirichlet::rv(&rng, alpha4, f);
     Probability::Dirichlet::rv(&rng, alpha6, r);
