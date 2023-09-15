@@ -8,8 +8,6 @@
 
 
 Polyhedral::Polyhedral(void) {
-
-    formatForMathematica = false;
     
     zeroQ = 0;
     oneQ = 1;
@@ -139,7 +137,6 @@ void Polyhedral::initializeFacets(void) {
     tetrahedra.clear();
     
     polytopeVolume = 0.0;
-    int planeCount = 0;
     for (auto pln : verticesMap)
         {
         mpf_class distance = pln.first->getDistance(center);
@@ -171,30 +168,7 @@ void Polyhedral::initializeFacets(void) {
         
         // triangluate and sample from each tetrahedron
         if (randomlySample == true)
-            {
             sampleTetrahedra(pln.second, distance);
-            }
-        
-        if (formatForMathematica == true)
-            {
-            mathematicaString += "Polygon[";
-            Vertex* f = first;
-            Vertex* p = f;
-            mathematicaString += "{";
-            do
-                {
-                if (p != f)
-                    mathematicaString += ",";
-                mathematicaString += "{" + p->getX().get_str() + ", " + p->getY().get_str() + ", " + p->getZ().get_str() + "}";
-                p = p->getTo();
-                } while (p != f);
-            mathematicaString += "}";
-            mathematicaString += "]";
-            if (planeCount + 1 < verticesMap.size())
-                mathematicaString += ",";
-            }
-            
-        planeCount++;
         }
         
     if (randomlySample == true)
@@ -211,6 +185,10 @@ void Polyhedral::initializeFacets(void) {
                 break;
                 }
             }
+            
+        for (auto tet : tetrahedra)
+            delete tet.first;
+        tetrahedra.clear();
         }
 }
 
@@ -268,18 +246,8 @@ void Polyhedral::initializePlanes(void) {
     
     // initialize min and max values
     if (randomlySample == true)
-        {
-        minX = 1;
-        minY = 1;
-        minZ = 1;
-        maxX = 0;
-        maxY = 0;
-        maxZ = 0;
-        }
-        
-    if (formatForMathematica == true)
-        mathematicaString = "Graphics3D[{";
-    
+        tetrahedra.clear();
+            
     // note that this checks all 12 choose 3 combinations of planes for intersection even though
     // six pairs of the planes are parallel to one another!
     VertexFactory& vf = VertexFactory::vertexFactoryInstance();
@@ -332,25 +300,7 @@ void Polyhedral::initializePlanes(void) {
                         insertVertex(planes[i], planes[j], intersectionPoint);
                         insertVertex(planes[i], planes[k], intersectionPoint);
                         insertVertex(planes[j], planes[k], intersectionPoint);
-                        
-                        // check extrema
-                        if (randomlySample == true)
-                            {
-                            if (intersectionPoint->getX() < minX)
-                                minX = intersectionPoint->getX();
-                            if (intersectionPoint->getY() < minY)
-                                minY = intersectionPoint->getY();
-                            if (intersectionPoint->getZ() < minZ)
-                                minZ = intersectionPoint->getZ();
-                            if (intersectionPoint->getX() > maxX)
-                                maxX = intersectionPoint->getX();
-                            if (intersectionPoint->getY() > maxY)
-                                maxY = intersectionPoint->getY();
-                            if (intersectionPoint->getZ() > maxZ)
-                                maxZ = intersectionPoint->getZ();
-                            }
                         }
-                        
                         
                     }
                 }
@@ -359,19 +309,9 @@ void Polyhedral::initializePlanes(void) {
         
     // set up facets
     initializeFacets();
-    
-    if (formatForMathematica == true)
-        mathematicaString += "}, PlotRange->{{0,1},{0,1},{0,1}},BoxStyle->Dashed]";
 
     // clean up
     vf.recallAllVertices();
-    
-    if (randomlySample == true)
-        {
-        diffX = maxX - minX;
-        diffY = maxY - minY;
-        diffZ = maxZ - minZ;
-        }
 }
 
 void Polyhedral::insertVertex(Plane* p1, Plane* p2, Vertex* v) {
@@ -450,35 +390,6 @@ double Polyhedral::monteCarloVolume(int numberReplicates) {
     return (double)numberInPolytope / numberReplicates;
 }
 
-void Polyhedral::samplePolytope(Vector& pt) {
-
-    mpq_class v1 = diffX * diffY * diffZ;
-    mpf_class ratio = polytopeVolume / v1;
-    std::cout << "ratio = " << std::scientific << ratio << std::endl;
-    
-    RandomVariable& rng = RandomVariable::randomVariableInstance();
-    mpq_class x;
-    mpq_class y;
-    mpq_class z;
-    bool isValidPoint = false;
-    do {
-        x = minX + (diffX * rng.uniformRv());
-        y = minY + (diffY * rng.uniformRv());
-        z = minZ + (diffZ * rng.uniformRv());
-        pt.setX(x);
-        pt.setY(y);
-        pt.setZ(z);
-        if (isValid(pt) == true)
-            isValidPoint = true;
-        } while(isValidPoint == false);
-        
-#   if 1
-    std::cout << "(" << minX.get_d() << " " << x.get_d() << " " << maxX.get_d() << ") ";
-    std::cout << "(" << minY.get_d() << " " << y.get_d() << " " << maxY.get_d() << ") ";
-    std::cout << "(" << minZ.get_d() << " " << z.get_d() << " " << maxZ.get_d() << ") " << std::endl;
-#   endif
-}
-
 void Polyhedral::sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d) {
 
     Vector pt;
@@ -555,7 +466,9 @@ mpf_class Polyhedral::volume(std::vector<mpq_class>& W, Vector& pt) {
 
     randomlySample = true;
     setWeights(W);
-    samplePolytope(pt);
+    pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
+    if (isValid(pt) == false)
+        Msg::error("Random point is not in polyhedron");
     randomlySample = false;
     return polytopeVolume;
 }

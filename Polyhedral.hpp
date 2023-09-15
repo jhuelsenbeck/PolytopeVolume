@@ -14,6 +14,7 @@ class Vertex;
 
 typedef std::map<Plane*,std::vector<Vertex*>> plane_vertex_map;
 typedef std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*>> line_vertex_map;
+typedef std::map<Vector*,mpf_class> vector_volume_map;
 
 
 
@@ -23,8 +24,6 @@ class Polyhedral {
     public:
                             Polyhedral(void);
                             Polyhedral(const Polyhedral& p) = delete;
-        void                computeMathematicaOutput(void) { formatForMathematica = true; }
-        std::string         getMathematicaOutput(void) { return mathematicaString; }
         double              monteCarloVolume(int numberReplicates);
         mpf_class           volume(std::vector<mpq_class>& W);
         mpf_class           volume(std::vector<mpq_class>& W, Vector& pt);
@@ -37,7 +36,6 @@ class Polyhedral {
         void                initializePlanes(void);
         void                insertVertex(Plane* p1, Plane* p2, Vertex* v);
         bool                isValid(Vector& pt);
-        void                samplePolytope(Vector& pt);
         void                sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d);
         void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt);
         void                setWeights(std::vector<mpq_class>& W);
@@ -48,17 +46,7 @@ class Polyhedral {
         mpq_class           wCG;
         mpq_class           wCT;
         mpq_class           wGT;
-        
-        mpq_class           minX;
-        mpq_class           minY;
-        mpq_class           minZ;
-        mpq_class           maxX;
-        mpq_class           maxY;
-        mpq_class           maxZ;
-        mpq_class           diffX;
-        mpq_class           diffY;
-        mpq_class           diffZ;
-        
+                
         mpq_class           xzMaxA;
         mpq_class           xzMaxB;
         mpq_class           xzMinA;
@@ -113,12 +101,9 @@ class Polyhedral {
         std::vector<Plane*> planes;
         plane_vertex_map    verticesMap;
         line_vertex_map     linesMap;
-        
-        bool                formatForMathematica;
-        std::string         mathematicaString;
 
         bool                randomlySample;
-        std::map<Vector*,mpf_class>   tetrahedra;
+        vector_volume_map   tetrahedra;
         Vector              randomPoint;
         
         mpf_class           polytopeVolume;
