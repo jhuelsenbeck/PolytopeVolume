@@ -21,9 +21,10 @@ class Polyhedral {
 
     public:
                             Polyhedral(void);
-        mpf_class           getVolume(void) { return volume; }
+                            Polyhedral(const Polyhedral& p) = delete;
         double              monteCarloVolume(int numberReplicates);
-        void                setWeights(std::vector<mpq_class>& W);
+        mpf_class           volume(std::vector<mpq_class>& W);
+        mpf_class           volume(std::vector<mpq_class>& W, Vector& pt);
     
     private:
         mpq_class           facetArea(Vertex* first, Plane* pln);
@@ -32,6 +33,8 @@ class Polyhedral {
         void                initializePlanes(void);
         void                insertVertex(line_vertex_map& linesMap, Plane* p1, Plane* p2, Vertex* v);
         bool                isValid(Vector& pt);
+        void                samplePolytope(Vector& pt);
+        void                setWeights(std::vector<mpq_class>& W);
         
         mpq_class           wAC;
         mpq_class           wAG;
@@ -46,6 +49,10 @@ class Polyhedral {
         mpq_class           maxX;
         mpq_class           maxY;
         mpq_class           maxZ;
+        mpq_class           diffX;
+        mpq_class           diffY;
+        mpq_class           diffZ;
+        
         mpq_class           xzMaxA;
         mpq_class           xzMaxB;
         mpq_class           xzMinA;
@@ -84,7 +91,6 @@ class Polyhedral {
         Vector              one_Zero_yzMaxA;
         Vector              one_Zero_yzMinA;
 
-        std::vector<Plane*> planes;
         Plane               front;
         Plane               back;
         Plane               top;
@@ -98,7 +104,12 @@ class Polyhedral {
         Plane               yz1;
         Plane               yz2;
 
-        mpf_class           volume;
+        std::vector<Plane*> planes;
+        plain_vertex_map    verticesMap;
+        line_vertex_map     linesMap;
+
+        bool                computeExtrema;
+        mpf_class           polytopeVolume;
 };
 
 #endif

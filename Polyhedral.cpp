@@ -14,11 +14,14 @@ Polyhedral::Polyhedral(void) {
     oneHalfQ = 1;
     oneHalfQ /= 2;
     twoQ = 2;
+    
+    computeExtrema = false;
 
     center.setX(oneHalfQ);
     center.setY(oneHalfQ);
     center.setZ(oneHalfQ);
 
+    // set up fixed planes of cube
     front.set( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ,  oneQ, zeroQ), Vector( oneQ,  oneQ, zeroQ) );
     back.set( Vector(zeroQ, zeroQ,  oneQ), Vector(zeroQ,  oneQ,  oneQ), Vector( oneQ,  oneQ,  oneQ) );
     top.set( Vector(zeroQ,  oneQ, zeroQ), Vector(zeroQ,  oneQ,  oneQ), Vector( oneQ,  oneQ,  oneQ) );
@@ -39,7 +42,7 @@ Polyhedral::Polyhedral(void) {
     planes.push_back(&yz1);
     planes.push_back(&yz2);
     
-    volume = 0.0;
+    polytopeVolume = 0.0;
 }
 
 mpq_class Polyhedral::facetArea(Vertex* first, Plane* pln) {
@@ -111,7 +114,7 @@ Vertex* Polyhedral::findOtherVertex(Vertex* from, std::map< std::pair<Plane*,Pla
 
 void Polyhedral::initializeFacets(plain_vertex_map& verticesMap, line_vertex_map& linesMap) {
 
-    volume = 0.0;
+    polytopeVolume = 0.0;
     for (auto pln : verticesMap)
         {
         mpf_class distance = pln.first->getDistance(center);
@@ -139,7 +142,7 @@ void Polyhedral::initializeFacets(plain_vertex_map& verticesMap, line_vertex_map
         // calculate the pyramid volume
         facetBaseArea /= 3;
         mpf_class facetBaseAreaF = facetBaseArea;
-        volume += facetBaseAreaF * distance;
+        polytopeVolume += facetBaseAreaF * distance;
         }
 }
 
@@ -187,6 +190,7 @@ void Polyhedral::initializePlanes(void) {
     one_Zero_yzMaxA.set(oneQ, zeroQ, yzMaxA);   // Vector(oneQ, zeroQ, yzMaxA)
     one_Zero_yzMinA.set(oneQ, zeroQ, yzMinA);   // Vector(oneQ, zeroQ, yzMinA)
 
+    // set up non-fixed planes
     xz1.set( xzMaxA_Zero_Zero, xzMaxB_Zero_One, xzMaxA_One_Zero );
     xz2.set( xzMinA_Zero_Zero, xzMinB_Zero_One, xzMinA_One_Zero );
     xy1.set( zero_xyMaxA_Zero, one_xyMaxB_Zero, zero_xyMaxA_One );
@@ -194,9 +198,22 @@ void Polyhedral::initializePlanes(void) {
     yz1.set( zero_Zero_yzMaxA, zero_One_yzMaxB, one_Zero_yzMaxA );
     yz2.set( zero_Zero_yzMinA, zero_One_yzMinB, one_Zero_yzMinA );
     
+    // initialize min and max values
+    if (computeExtrema == true)
+        {
+        minX = 1;
+        minY = 1;
+        minZ = 1;
+        maxX = 0;
+        maxY = 0;
+        maxZ = 0;
+        }
+    
+    // note that this checks all 12 choose 3 combinations of planes for intersection even though
+    // six pairs of the planes are parallel to one another!
     VertexFactory& vf = VertexFactory::vertexFactoryInstance();
-    plain_vertex_map verticesMap;
-    line_vertex_map linesMap;
+    verticesMap.clear();
+    linesMap.clear();
     for (int i=0, n1 = (int)planes.size(); i<n1; i++)
         {
         for (int j=i+1, n2 = (int)planes.size(); j<n2; j++)
@@ -244,6 +261,23 @@ void Polyhedral::initializePlanes(void) {
                         insertVertex(linesMap, planes[i], planes[j], intersectionPoint);
                         insertVertex(linesMap, planes[i], planes[k], intersectionPoint);
                         insertVertex(linesMap, planes[j], planes[k], intersectionPoint);
+                        
+                        // check extrema
+                        if (computeExtrema == true)
+                            {
+                            if (intersectionPoint->getX() < minX)
+                                minX = intersectionPoint->getX();
+                            if (intersectionPoint->getY() < minY)
+                                minY = intersectionPoint->getY();
+                            if (intersectionPoint->getZ() < minZ)
+                                minZ = intersectionPoint->getZ();
+                            if (intersectionPoint->getX() > maxX)
+                                maxX = intersectionPoint->getX();
+                            if (intersectionPoint->getY() > maxY)
+                                maxY = intersectionPoint->getY();
+                            if (intersectionPoint->getZ() > maxZ)
+                                maxZ = intersectionPoint->getZ();
+                            }
                         }
                         
                         
@@ -257,6 +291,13 @@ void Polyhedral::initializePlanes(void) {
     
     // clean up
     vf.recallAllVertices();
+    
+    if (computeExtrema == true)
+        {
+        diffX = maxX - minX;
+        diffY = maxY - minY;
+        diffZ = maxZ - minZ;
+        }
 }
 
 void Polyhedral::insertVertex(line_vertex_map& linesMap, Plane* p1, Plane* p2, Vertex* v) {
@@ -336,6 +377,31 @@ double Polyhedral::monteCarloVolume(int numberReplicates) {
     return (double)numberInPolytope / numberReplicates;
 }
 
+void Polyhedral::samplePolytope(Vector& pt) {
+
+    RandomVariable& rng = RandomVariable::randomVariableInstance();
+    mpq_class x;
+    mpq_class y;
+    mpq_class z;
+    bool isValidPoint = false;
+    do {
+        x = minX + (diffX * rng.uniformRv());
+        y = minY + (diffY * rng.uniformRv());
+        z = minZ + (diffZ * rng.uniformRv());
+        pt.setX(x);
+        pt.setY(y);
+        pt.setZ(z);
+        if (isValid(pt) == true)
+            isValidPoint = true;
+        } while(isValidPoint == false);
+        
+#   if 1
+    std::cout << "(" << minX.get_d() << " " << x.get_d() << " " << maxX.get_d() << ") ";
+    std::cout << "(" << minY.get_d() << " " << y.get_d() << " " << maxY.get_d() << ") ";
+    std::cout << "(" << minZ.get_d() << " " << z.get_d() << " " << maxZ.get_d() << ") " << std::endl;
+#   endif
+}
+
 void Polyhedral::setWeights(std::vector<mpq_class>& W) {
 
     // extract symbols from W
@@ -347,4 +413,19 @@ void Polyhedral::setWeights(std::vector<mpq_class>& W) {
     wGT = W[5];
     
     initializePlanes();
+}
+
+mpf_class Polyhedral::volume(std::vector<mpq_class>& W) {
+
+    setWeights(W);
+    return polytopeVolume;
+}
+
+mpf_class Polyhedral::volume(std::vector<mpq_class>& W, Vector& pt) {
+
+    computeExtrema = true;
+    setWeights(W);
+    samplePolytope(pt);
+    computeExtrema = false;
+    return polytopeVolume;
 }

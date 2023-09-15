@@ -17,15 +17,18 @@ int main(int argc, const char* argv[]) {
 
     Polyhedral poly;
 
-    for (int i=0; i<100000; i++)
+    Vector randomPoint;
+    for (int i=0; i<10; i++)
         {
         std::vector<mpq_class> W = initializeRateMatrix();
-        poly.setWeights(W);
-        mpf_class v = poly.getVolume();
-        std::cout << std::fixed << std::scientific << std::setprecision(10);
-        std::cout << i+1 << " -- Exact Volume: " << v;
-        std::cout << std::fixed << std::setprecision(5);
-        std::cout << " " << log(v.get_d()) << std::endl;
+        mpf_class v = poly.volume(W, randomPoint);
+        if ( (i+1) % 1 == 0)
+            {
+            std::cout << std::fixed << std::scientific << std::setprecision(10);
+            std::cout << i+1 << " -- Volume: " << v;
+            std::cout << std::fixed << std::setprecision(5);
+            std::cout << " (" << log(v.get_d()) << ")" << std::endl;
+            }
         }
     
     return 0;
@@ -36,8 +39,8 @@ std::vector<mpq_class> initializeRateMatrix(void) {
     // randomly initialize parameters of the GTR model
     std::vector<double> f(4);
     std::vector<double> r(6);
-    std::vector<double> alpha4(4, 0.1);
-    std::vector<double> alpha6(6, 1.0);
+    std::vector<double> alpha4(4, 10.0);
+    std::vector<double> alpha6(6, 0.1);
     RandomVariable& rng = RandomVariable::randomVariableInstance();
     Probability::Dirichlet::rv(&rng, alpha4, f);
     Probability::Dirichlet::rv(&rng, alpha6, r);
@@ -121,16 +124,13 @@ std::vector<mpq_class> initializeRateMatrix(void) {
     W.push_back(wGT);
 
 #   if 0
-    mpq_t sum;
-    mpq_init(sum);
-    mpq_set_d(sum, 0.0);
+    mpq_class sum;
     for (int i=0; i<6; i++)
         {
         std::cout << "W[" << i << "] = " << W[i] << " " << W[i].get_d() << " " << w[i] << std::endl;
-        mpq_add(sum, W[i].get_mpq_t(), sum);
+        sum += W[i];
         }
     std::cout << "W[ ] = " << sum << std::endl;
-    mpq_clear(sum);
 #   endif
 
     return W;
