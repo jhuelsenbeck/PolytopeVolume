@@ -1,3 +1,4 @@
+#include <iomanip>
 #include <map>
 #include "Facet.hpp"
 #include "Geometry.hpp"
@@ -5,6 +6,7 @@
 #include "Polyhedral.hpp"
 #include "RandomVariable.hpp"
 #include "VertexFactory.hpp"
+
 
 
 Polyhedral::Polyhedral(void) {
@@ -135,7 +137,7 @@ Vertex* Polyhedral::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
 void Polyhedral::initializeFacets(void) {
     
     tetrahedra.clear();
-    
+        
     polytopeVolume = 0.0;
     for (auto pln : verticesMap)
         {
@@ -244,7 +246,8 @@ void Polyhedral::initializePlanes(void) {
     yz1.set( zero_Zero_yzMaxA, zero_One_yzMaxB, one_Zero_yzMaxA );
     yz2.set( zero_Zero_yzMinA, zero_One_yzMinB, one_Zero_yzMinA );
     
-    // initialize min and max values
+    // empty out the tetrahedra map in preparation for finding random points in
+    // in a triangulation of the polyhedron
     if (randomlySample == true)
         tetrahedra.clear();
             
@@ -395,16 +398,23 @@ void Polyhedral::sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d) 
     Vector pt;
     Vertex* f = vertices[0];
     Vertex* p = f->getTo();
-    Vertex* v1 = f;
+    Vertex* v1 = f; // point common to all triangulations of this facet
     do
         {
+        // form triangulation
         Vertex* v2 = p;
         Vertex* v3 = p->getTo();
-        sampleTetrahedron(&center, v1, v2, v3, pt);
+        
+        // calculate volume
         mpf_class tetrahedronVolume;
         calculateTetrahedronVolume(v1, v2, v3, d, tetrahedronVolume);
+        
+        // add a random point from tetrahedron to tetrahedra map for latter use
         Vector* newV = new Vector(pt);
+        sampleTetrahedron(&center, v1, v2, v3, *newV);
         tetrahedra.insert( std::make_pair(newV,tetrahedronVolume) );
+        
+        // on to the next triangulation
         p = v3;
         } while (p->getTo() != f);
 }

@@ -37,7 +37,6 @@ uint32_t RandomVariable::extractU32(void) {
     return y;
 }
 
-
 void RandomVariable::initialize(uint32_t seed) {
 
     mt[0] = seed;
@@ -50,8 +49,6 @@ void RandomVariable::initialize(uint32_t seed) {
     for (size_t i=0; i<10000; i++)
         extractU32();
 }
-
-
 
 void RandomVariable::twist(void) {
 

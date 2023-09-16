@@ -11,7 +11,6 @@ class Facet;
 class Vector;
 class Vertex;
 
-
 typedef std::map<Plane*,std::vector<Vertex*>> plane_vertex_map;
 typedef std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*>> line_vertex_map;
 typedef std::map<Vector*,mpf_class> vector_volume_map;
@@ -19,7 +18,6 @@ typedef std::map<Vector*,mpf_class> vector_volume_map;
 
 
 class Polyhedral {
-
 
     public:
                             Polyhedral(void);

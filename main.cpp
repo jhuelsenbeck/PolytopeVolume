@@ -15,7 +15,23 @@ std::vector<mpq_class> initializeRateMatrix(void);
 
 int main(int argc, const char* argv[]) {
 
+    // interface, such as it is
+    int numCycles = 100000;
+    double alphaFreqs = 10.0;
+
+    // initialize the chain
     Polyhedral poly;
+    std::vector<double> freqs(4, 0.25);
+    std::vector<double> rates(6, 1.0);
+    bool isReversible = true;
+        
+    
+    
+    
+    
+    
+    
+    
 
     Vector randomPoint;
     for (int i=0; i<10000; i++)
@@ -30,6 +46,9 @@ int main(int argc, const char* argv[]) {
             std::cout << " (" << log(v.get_d()) << ") " << randomPoint.getStr() << std::endl;
             }
         }
+        
+        
+        
     
     return 0;
 }
@@ -39,8 +58,8 @@ std::vector<mpq_class> initializeRateMatrix(void) {
     // randomly initialize parameters of the GTR model
     std::vector<double> f(4);
     std::vector<double> r(6);
-    std::vector<double> alpha4(4, 10.0);
-    std::vector<double> alpha6(6, 0.1);
+    std::vector<double> alpha4(4, 1.0);
+    std::vector<double> alpha6(6, 1.0);
     RandomVariable& rng = RandomVariable::randomVariableInstance();
     Probability::Dirichlet::rv(&rng, alpha4, f);
     Probability::Dirichlet::rv(&rng, alpha6, r);
