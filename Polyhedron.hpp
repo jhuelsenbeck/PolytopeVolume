@@ -1,5 +1,5 @@
-#ifndef Polyhedral_hpp
-#define Polyhedral_hpp
+#ifndef Polyhedron_hpp
+#define Polyhedron_hpp
 
 #include <map>
 #include <vector>
@@ -17,11 +17,11 @@ typedef std::map<Vector*,mpf_class> vector_volume_map;
 
 
 
-class Polyhedral {
+class Polyhedron {
 
     public:
-                            Polyhedral(void);
-                            Polyhedral(const Polyhedral& p) = delete;
+                            Polyhedron(void);
+                            Polyhedron(const Polyhedron& p) = delete;
         double              monteCarloVolume(int numberReplicates);
         mpf_class           volume(std::vector<mpq_class>& W);
         mpf_class           volume(std::vector<mpq_class>& W, Vector& pt);

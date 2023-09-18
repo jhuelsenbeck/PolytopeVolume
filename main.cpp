@@ -2,7 +2,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
-#include "Polyhedral.hpp"
+#include "Polyhedron.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
 #include "Test.hpp"
@@ -20,7 +20,7 @@ int main(int argc, const char* argv[]) {
     double alphaFreqs = 10.0;
 
     // initialize the chain
-    Polyhedral poly;
+    Polyhedron poly;
     std::vector<double> freqs(4, 0.25);
     std::vector<double> rates(6, 1.0);
     bool isReversible = true;

@@ -3,13 +3,13 @@
 #include "Facet.hpp"
 #include "Geometry.hpp"
 #include "Msg.hpp"
-#include "Polyhedral.hpp"
+#include "Polyhedron.hpp"
 #include "RandomVariable.hpp"
 #include "VertexFactory.hpp"
 
 
 
-Polyhedral::Polyhedral(void) {
+Polyhedron::Polyhedron(void) {
     
     zeroQ = 0;
     oneQ = 1;
@@ -47,7 +47,7 @@ Polyhedral::Polyhedral(void) {
     polytopeVolume = 0.0;
 }
 
-void Polyhedral::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpf_class& d, mpf_class& vol) {
+void Polyhedron::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpf_class& d, mpf_class& vol) {
 
     mpq_class x1 = v2->getX() - v1->getX();
     mpq_class y1 = v2->getY() - v1->getY();
@@ -67,7 +67,7 @@ void Polyhedral::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, 
     vol = area * d / 3.0;
 }
 
-mpq_class Polyhedral::facetArea(Vertex* first, Plane* pln) {
+mpq_class Polyhedron::facetArea(Vertex* first, Plane* pln) {
 
     Vector unitNormal;
     pln->normal(unitNormal);
@@ -102,7 +102,7 @@ mpq_class Polyhedral::facetArea(Vertex* first, Plane* pln) {
     return facetArea;
 }
 
-Vertex* Polyhedral::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
+Vertex* Polyhedron::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
 
     for (auto lne : linesMap)
         {
@@ -134,7 +134,7 @@ Vertex* Polyhedral::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
     return nullptr;
 }
 
-void Polyhedral::initializeFacets(void) {
+void Polyhedron::initializeFacets(void) {
     
     tetrahedra.clear();
         
@@ -194,7 +194,7 @@ void Polyhedral::initializeFacets(void) {
         }
 }
 
-void Polyhedral::initializePlanes(void) {
+void Polyhedron::initializePlanes(void) {
 
     // make planes that will slice up the cube
     // u1 -> (-wAG + wCG - wGT + 2.0 * u3 * wGT) / (2.0 * wCG)   max in x,z
@@ -317,7 +317,7 @@ void Polyhedral::initializePlanes(void) {
     vf.recallAllVertices();
 }
 
-void Polyhedral::insertVertex(Plane* p1, Plane* p2, Vertex* v) {
+void Polyhedron::insertVertex(Plane* p1, Plane* p2, Vertex* v) {
 
     std::pair<Plane*,Plane*> key(p1, p2);
     if (p2 < p1)
@@ -336,7 +336,7 @@ void Polyhedral::insertVertex(Plane* p1, Plane* p2, Vertex* v) {
         }
 }
 
-bool Polyhedral::isValid(Vector& pt) {
+bool Polyhedron::isValid(Vector& pt) {
 
     mpq_class& x = pt.getX();
     mpq_class& y = pt.getY();
@@ -376,7 +376,7 @@ bool Polyhedral::isValid(Vector& pt) {
     return true;
 }
 
-double Polyhedral::monteCarloVolume(int numberReplicates) {
+double Polyhedron::monteCarloVolume(int numberReplicates) {
 
     RandomVariable& rng = RandomVariable::randomVariableInstance();
     int numberInPolytope = 0;
@@ -393,7 +393,7 @@ double Polyhedral::monteCarloVolume(int numberReplicates) {
     return (double)numberInPolytope / numberReplicates;
 }
 
-void Polyhedral::sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d) {
+void Polyhedron::sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d) {
 
     Vector pt;
     Vertex* f = vertices[0];
@@ -419,7 +419,7 @@ void Polyhedral::sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d) 
         } while (p->getTo() != f);
 }
 
-void Polyhedral::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt) {
+void Polyhedron::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt) {
 
     RandomVariable& rng = RandomVariable::randomVariableInstance();
     
@@ -453,7 +453,7 @@ void Polyhedral::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vecto
     pt.set(x, y, z); // Vector pt = v0*a + v1*s + v2*t + v3*u;
 }
 
-void Polyhedral::setWeights(std::vector<mpq_class>& W) {
+void Polyhedron::setWeights(std::vector<mpq_class>& W) {
 
     // extract symbols from W
     wAC = W[0];
@@ -466,13 +466,13 @@ void Polyhedral::setWeights(std::vector<mpq_class>& W) {
     initializePlanes();
 }
 
-mpf_class Polyhedral::volume(std::vector<mpq_class>& W) {
+mpf_class Polyhedron::volume(std::vector<mpq_class>& W) {
 
     setWeights(W);
     return polytopeVolume;
 }
 
-mpf_class Polyhedral::volume(std::vector<mpq_class>& W, Vector& pt) {
+mpf_class Polyhedron::volume(std::vector<mpq_class>& W, Vector& pt) {
 
     randomlySample = true;
     setWeights(W);
