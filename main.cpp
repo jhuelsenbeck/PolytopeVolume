@@ -2,6 +2,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include "Mcmc.hpp"
 #include "Polyhedron.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
@@ -16,17 +17,17 @@ std::vector<mpq_class> initializeRateMatrix(void);
 int main(int argc, const char* argv[]) {
 
     // interface, such as it is
-    int numCycles = 100000;
-    double alphaFreqs = 10.0;
+    int numCycles = 1;
 
     // initialize the chain
     Polyhedron poly;
-    std::vector<double> freqs(4, 0.25);
-    std::vector<double> rates(6, 1.0);
-    bool isReversible = true;
         
     
-    
+    Mcmc mcmc;
+    for (int n=1; n<=numCycles; n++)
+        {
+        mcmc.update();
+        }
     
     
     
@@ -34,7 +35,7 @@ int main(int argc, const char* argv[]) {
     
 
     Vector randomPoint;
-    for (int i=0; i<10000; i++)
+    for (int i=0; i<1; i++)
         {
         std::vector<mpq_class> W = initializeRateMatrix();
         mpf_class v = poly.volume(W, randomPoint);
