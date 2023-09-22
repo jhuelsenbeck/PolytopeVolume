@@ -9,6 +9,13 @@ Vector::Vector(void) {
     this->z = 0;
 }
 
+Vector::Vector(const Vector& v) {
+
+    this->x = v.x;
+    this->y = v.y;
+    this->z = v.z;
+}
+
 Vector::Vector(int xI, int yI, int zI) {
 
     this->x = xI;
@@ -23,7 +30,7 @@ Vector::Vector(double xD, double yD, double zD) {
     this->z = zD;
 }
 
-Vector::Vector(mpq_class& xQ, mpq_class yQ, mpq_class zQ) {
+Vector::Vector(mpq_class& xQ, mpq_class& yQ, mpq_class& zQ) {
 
     this->x = xQ;
     this->y = yQ;

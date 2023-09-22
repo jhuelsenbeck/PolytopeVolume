@@ -2,8 +2,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
-#include "Mcmc.hpp"
-#include "Polyhedron.hpp"
+#include "McmcState.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
 #include "Test.hpp"
@@ -17,23 +16,45 @@ std::vector<mpq_class> initializeRateMatrix(void);
 int main(int argc, const char* argv[]) {
 
     // interface, such as it is
-    int numCycles = 1;
+    int numCycles = 10000000;
 
-    // initialize the chain
-    Polyhedron poly;
-        
-    
-    Mcmc mcmc;
+    McmcState state;
+    double lnLikelihoodRatio = 0.0;
+    double curLnPrior = state.lnPriorProbability();
+    int reversibleCount = 0;
     for (int n=1; n<=numCycles; n++)
         {
-        mcmc.update();
+        std::string updateType;
+        double lnProposalRatio = state.update(updateType);
+        double newLnPrior = state.lnPriorProbability();
+        double lnPriorRatio = newLnPrior - curLnPrior;
+        
+        std::cout << std::fixed << std::setprecision(6);
+        std::cout << std::setw(5) << n << " -- " << std::setw(9) << lnPriorRatio << " " << std::setw(9) << lnProposalRatio << " " << updateType << " -- ";
+        if (state.accept(lnLikelihoodRatio + lnPriorRatio + lnProposalRatio) == true)
+            {
+            state.updateForAcceptance();
+            curLnPrior = newLnPrior;
+            std::cout << "Accepted -- ";
+            }
+        else
+            {
+            state.updateForRejection();
+            std::cout << "Rejected -- ";
+            }
+        std::cout << std::fixed << std::setprecision(3) << (double)reversibleCount / n << " ";
+        std::cout << state.stateString();
+        std::cout << std::endl;
+        if (state.getIsTimeReversible() == true)
+            reversibleCount++;
         }
+    std::cout << "Pr[Reversible] = " << (double)reversibleCount / numCycles << std::endl;
     
     
     
     
     
-
+#if 0
     Vector randomPoint;
     for (int i=0; i<1; i++)
         {
@@ -47,7 +68,7 @@ int main(int argc, const char* argv[]) {
             std::cout << " (" << log(v.get_d()) << ") " << randomPoint.getStr() << std::endl;
             }
         }
-        
+#endif
         
         
     

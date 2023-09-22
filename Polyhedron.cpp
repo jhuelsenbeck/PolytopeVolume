@@ -453,7 +453,62 @@ void Polyhedron::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vecto
     pt.set(x, y, z); // Vector pt = v0*a + v1*s + v2*t + v3*u;
 }
 
+void Polyhedron::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt, double shrinkageFactor) {
+
+    RandomVariable& rng = RandomVariable::randomVariableInstance();
+    
+    mpq_class factor = shrinkageFactor;
+    mpq_class oneHalf = 1;
+    oneHalf /= 2;
+    
+    Vector newV1(*v1);
+    Vector newV2(*v2);
+    Vector newV3(*v3);
+    
+    mpq_class s = rng.uniformRv();
+    mpq_class t = rng.uniformRv();
+    mpq_class u = rng.uniformRv();
+
+    if (s + t > 1)
+        {
+        // cut'n fold the cube into a prism
+        s = 1 - s;
+        t = 1 - t;
+        }
+    if (t + u > 1)
+        {
+        // cut'n fold the prism into a tetrahedron
+        mpq_class tmp = u;
+        u = 1 - s - t;
+        t = 1 - tmp;
+        }
+    else if (s + t + u > 1)
+        {
+        mpq_class tmp = u;
+        u = s + t + u - 1;
+        s = 1 - t - tmp;
+        }
+    mpq_class a = 1 - s - t - u; // a,s,t,u are the barycentric coordinates of the random point.
+    mpq_class x = center->getX() * a + newV1.getX() * s + newV2.getX() * t + newV3.getX() * u;
+    mpq_class y = center->getY() * a + newV1.getY() * s + newV2.getY() * t + newV3.getY() * u;
+    mpq_class z = center->getZ() * a + newV1.getZ() * s + newV2.getZ() * t + newV3.getZ() * u;
+    pt.set(x, y, z); // Vector pt = v0*a + v1*s + v2*t + v3*u;
+}
+
 void Polyhedron::setWeights(std::vector<mpq_class>& W) {
+
+    // extract symbols from W
+    wAC = W[0];
+    wAG = W[1];
+    wAT = W[2];
+    wCG = W[3];
+    wCT = W[4];
+    wGT = W[5];
+    
+    initializePlanes();
+}
+
+void Polyhedron::setWeights(std::vector<mpq_class>& W, mpq_class& f) {
 
     // extract symbols from W
     wAC = W[0];
@@ -480,5 +535,12 @@ mpf_class Polyhedron::volume(std::vector<mpq_class>& W, Vector& pt) {
     if (isValid(pt) == false)
         Msg::error("Random point is not in polyhedron");
     randomlySample = false;
+    return polytopeVolume;
+}
+
+mpf_class Polyhedron::volume(std::vector<mpq_class>& W, double fac) {
+
+    mpq_class fQ = fac;
+    setWeights(W, fQ);
     return polytopeVolume;
 }

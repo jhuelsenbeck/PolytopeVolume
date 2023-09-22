@@ -56,7 +56,7 @@ void RateMatrix::calculateStationaryFrequencies(std::vector<mpq_class>& f) {
 	f[3] = 1;
 	for (int i=4-2; i>=0; i--)
 		{
-		mpq_class dotProduct = 0.0;
+		mpq_class dotProduct;
 		for (int j=i+1; j<4; j++)
 			dotProduct += U(i,j) * f[j];
 		f[i] = (0 - dotProduct) / U(i,i);

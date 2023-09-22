@@ -25,6 +25,7 @@ class Polyhedron {
         double              monteCarloVolume(int numberReplicates);
         mpf_class           volume(std::vector<mpq_class>& W);
         mpf_class           volume(std::vector<mpq_class>& W, Vector& pt);
+        mpf_class           volume(std::vector<mpq_class>& W, double fac);
     
     private:
         void                calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpf_class& d, mpf_class& vol);
@@ -36,7 +37,9 @@ class Polyhedron {
         bool                isValid(Vector& pt);
         void                sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d);
         void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt);
+        void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt, double shrinkageFactor);
         void                setWeights(std::vector<mpq_class>& W);
+        void                setWeights(std::vector<mpq_class>& W, mpq_class& f);
         
         mpq_class           wAC;
         mpq_class           wAG;

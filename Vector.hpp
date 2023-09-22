@@ -8,9 +8,10 @@ class Vector {
 
     public:
                         Vector(void);
+                        Vector(const Vector& v);
                         Vector(int xI, int yI, int zI);
                         Vector(double xD, double yD, double zD);
-                        Vector(mpq_class& xQ, mpq_class yQ, mpq_class zQ);
+                        Vector(mpq_class& xQ, mpq_class& yQ, mpq_class& zQ);
         bool            operator==(Vector& rhs);
         bool            operator!=(Vector& rhs);
         Vector&         operator+=(Vector& rhs);
