@@ -5,7 +5,6 @@
 #include "McmcState.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
-#include "Test.hpp"
 
 #define MIN_FREQ    10e-10
 
