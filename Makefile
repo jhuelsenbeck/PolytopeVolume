@@ -1,4 +1,4 @@
-LIBS     =  -lm -lgmp -lcddgmp  -DGMPRATIONAL
+LIBS     =  -lm -lcddgmp  -DGMPRATIONAL -lgmpxx -lgmp
 
 CFLAGS   =  -O3 -DGMPRATIONAL
 
