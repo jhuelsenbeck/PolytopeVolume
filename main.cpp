@@ -16,7 +16,7 @@ std::vector<mpq_class> initializeRateMatrix(void);
 int main(int argc, const char* argv[]) {
 
     // interface, such as it is
-    int numCycles = 10000000;
+    int numCycles = 1;
 
     McmcState state;
     double lnLikelihoodRatio = 0.0;
@@ -54,12 +54,13 @@ int main(int argc, const char* argv[]) {
     
     
     
-#if 0
+#if 1
     Vector randomPoint;
-    for (int i=0; i<1; i++)
+    Polyhedron poly;
+    std::vector<mpq_class> W = initializeRateMatrix();
+    for (int i=0; i<1000; i++)
         {
-        std::vector<mpq_class> W = initializeRateMatrix();
-        mpf_class v = poly.volume(W, randomPoint);
+        mpf_class v = poly.volume(W, randomPoint, RandomVariable::randomVariableInstance().uniformRv());
         if ( (i+1) % 1 == 0)
             {
             std::cout << std::fixed << std::scientific << std::setprecision(10);

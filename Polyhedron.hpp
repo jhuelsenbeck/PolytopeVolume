@@ -11,8 +11,8 @@ class Facet;
 class Vector;
 class Vertex;
 
-typedef std::map<Plane*,std::vector<Vertex*>> plane_vertex_map;
-typedef std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*>> line_vertex_map;
+typedef std::map<Plane*,std::vector<Vertex*> > plane_vertex_map;
+typedef std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> > line_vertex_map;
 typedef std::map<Vector*,mpf_class> vector_volume_map;
 
 
@@ -25,11 +25,12 @@ class Polyhedron {
         double              monteCarloVolume(int numberReplicates);
         mpf_class           volume(std::vector<mpq_class>& W);
         mpf_class           volume(std::vector<mpq_class>& W, Vector& pt);
-        mpf_class           volume(std::vector<mpq_class>& W, double fac);
+        mpf_class           volume(std::vector<mpq_class>& W, Vector& pt, double fac);
     
     private:
-        void                calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpf_class& d, mpf_class& vol);
+        void                calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpf_class& vol);
         mpq_class           facetArea(Vertex* first, Plane* pln);
+        void                facetVolume(std::vector<Vertex*>& vertices, mpq_class& vol);
         Vertex*             findOtherVertex(Vertex* from, Vertex* v, Plane* pln);
         void                initializeFacets(void);
         void                initializePlanes(void);
@@ -39,7 +40,6 @@ class Polyhedron {
         void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt);
         void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt, double shrinkageFactor);
         void                setWeights(std::vector<mpq_class>& W);
-        void                setWeights(std::vector<mpq_class>& W, mpq_class& f);
         
         mpq_class           wAC;
         mpq_class           wAG;
