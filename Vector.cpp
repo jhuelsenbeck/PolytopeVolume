@@ -82,9 +82,9 @@ inline mpq_class Vector::distanceSquared(const Vector& vec) const {
 
 std::string Vector::getStr(void) {
 
-    std::string str = "(";
+    std::string str = "{";
     str += std::to_string(x.get_d()) + ", " + std::to_string(y.get_d()) + ", " + std::to_string(z.get_d());
-    str += ")";
+    str += "}";
     return str;
 }
 

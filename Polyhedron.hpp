@@ -23,6 +23,7 @@ class Polyhedron {
                             Polyhedron(void);
                             Polyhedron(const Polyhedron& p) = delete;
         double              monteCarloVolume(int numberReplicates);
+        void                print(std::vector<mpq_class>& W);
         mpf_class           volume(std::vector<mpq_class>& W);
         mpf_class           volume(std::vector<mpq_class>& W, Vector& pt);
         mpf_class           volume(std::vector<mpq_class>& W, Vector& pt, double fac);
@@ -36,6 +37,7 @@ class Polyhedron {
         void                initializePlanes(void);
         void                insertVertex(Plane* p1, Plane* p2, Vertex* v);
         bool                isValid(Vector& pt);
+        std::string         mathematicaPolyhedronOutput(void);
         void                sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d);
         void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt);
         void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt, double shrinkageFactor);
@@ -106,6 +108,8 @@ class Polyhedron {
         bool                randomlySample;
         vector_volume_map   tetrahedra;
         Vector              randomPoint;
+        
+        bool                mathematicaPolyhedron;
         
         mpf_class           polytopeVolume;
 };

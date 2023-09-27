@@ -57,7 +57,8 @@ int main(int argc, const char* argv[]) {
     Vector randomPoint;
     Polyhedron poly;
     std::vector<mpq_class> W = initializeRateMatrix();
-    for (int i=0; i<1000; i++)
+    poly.print(W);
+    /*for (int i=0; i<1000; i++)
         {
         mpf_class v = poly.volume(W, randomPoint, RandomVariable::randomVariableInstance().uniformRv());
         if ( (i+1) % 1 == 0)
@@ -67,7 +68,7 @@ int main(int argc, const char* argv[]) {
             std::cout << std::fixed << std::setprecision(5);
             std::cout << " (" << log(v.get_d()) << ") " << randomPoint.getStr() << std::endl;
             }
-        }
+        }*/
 #endif
         
         

@@ -3,6 +3,7 @@
 #include "Geometry.hpp"
 #include "Msg.hpp"
 #include "Polyhedron.hpp"
+#include "Probability.hpp"
 #include "RandomVariable.hpp"
 #include "VertexFactory.hpp"
 
@@ -17,6 +18,7 @@ Polyhedron::Polyhedron(void) {
     twoQ = 2;
     
     randomlySample = false;
+    mathematicaPolyhedron = false;
 
     center.setX(oneHalfQ);
     center.setY(oneHalfQ);
@@ -212,7 +214,7 @@ void Polyhedron::initializeFacets(void) {
             delete tet.first;
         tetrahedra.clear();
         }
-    std::cout << polytopeVolume.get_d() << " <-> " << vol.get_d() << std::endl;
+    //std::cout << polytopeVolume.get_d() << " <-> " << vol.get_d() << std::endl;
 }
 
 void Polyhedron::initializePlanes(void) {
@@ -331,9 +333,15 @@ void Polyhedron::initializePlanes(void) {
             }
         }
         
+    if (mathematicaPolyhedron == true)
+        {
+        std::string mathStr = mathematicaPolyhedronOutput();
+        std::cout << mathStr << std::endl;
+        }
+
     // set up facets
     initializeFacets();
-
+    
     // clean up
     vf.recallAllVertices();
 }
@@ -397,6 +405,58 @@ bool Polyhedron::isValid(Vector& pt) {
     return true;
 }
 
+std::string Polyhedron::mathematicaPolyhedronOutput(void) {
+ 
+    std::cout << std::fixed << std::setprecision(5);
+    std::string str = "Graphics3D[{";
+    tetrahedra.clear();
+    mpq_class vol;
+    polytopeVolume = 0.0;
+    int cnt = 0;
+    for (auto pln : verticesMap)
+        {
+        mpf_class distance = pln.first->getDistance(center);
+
+        // clean vertices
+        for (int i=0, n=(int)pln.second.size(); i<n; i++)
+            {
+            pln.second[i]->setTo(nullptr);
+            pln.second[i]->setFrom(nullptr);
+            }
+            
+        // order the vertices
+        Vertex* first = pln.second[0];
+        Vertex* v = first;
+        do {
+            Vertex* nextV = findOtherVertex(v->getFrom(), v, pln.first);
+            v->setTo(nextV);
+            nextV->setFrom(v);
+            v = nextV;
+            } while (v != first);
+            
+        // add the facet string
+        str += "Polygon[{";
+        v = first;
+        do
+            {
+            str += v->getStr();
+            v = v->getTo();
+            if (v != first)
+                str += ",";
+            } while (v != first);
+        str += "}]";
+        
+        if (cnt+1 != verticesMap.size())
+            str += ",";
+            
+        cnt++;
+        }
+                
+    str += "}, PlotRange->{{0,1},{0,1},{0,1}},BoxStyle->Dashed]";
+
+    return str;
+}
+
 double Polyhedron::monteCarloVolume(int numberReplicates) {
 
     RandomVariable& rng = RandomVariable::randomVariableInstance();
@@ -412,6 +472,49 @@ double Polyhedron::monteCarloVolume(int numberReplicates) {
             numberInPolytope++;
         }
     return (double)numberInPolytope / numberReplicates;
+}
+
+void Polyhedron::print(std::vector<mpq_class>& W) {
+
+    // print the polyhedron
+    mathematicaPolyhedron = true;
+    setWeights(W);
+    mathematicaPolyhedron = false;
+    
+    RandomVariable& rng = RandomVariable::randomVariableInstance();
+    int numPoints = 2000;
+    Vector pt;
+    randomlySample = true;
+    
+    // uniform at random Beta(inf,0)
+    std::cout << "ListPointPlot3D[{";
+    for (int i=0; i<numPoints; i++)
+        {
+        setWeights(W);
+        mpq_class& x = randomPoint.getX();
+        mpq_class& y = randomPoint.getY();
+        mpq_class& z = randomPoint.getZ();
+        x -= oneHalfQ;
+        y -= oneHalfQ;
+        z -= oneHalfQ;
+        mpq_class factor = 1.0;
+        //mpq_class factor = Probability::Beta(1.0,1.0);
+        x *= factor;
+        y *= factor;
+        z *= factor;
+        x += oneHalfQ;
+        y += oneHalfQ;
+        z += oneHalfQ;
+        pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
+        if (isValid(pt) == false)
+            Msg::error("Random point is not in polyhedron");
+        std::cout << pt.getStr();
+        if (i+1 != numPoints)
+            std::cout << ",";
+        }
+    std::cout << "}, PlotRange -> {{0, 1}, {0, 1}, {0, 1}}, BoxStyle -> Dashed, PlotStyle -> {Blue, PointSize[0.01]},BoxRatios -> 1, LabelStyle -> Opacity[0], Ticks -> None]" << std::endl;
+    
+    randomlySample = false;
 }
 
 void Polyhedron::facetVolume(std::vector<Vertex*>& vertices, mpq_class& vol) {
