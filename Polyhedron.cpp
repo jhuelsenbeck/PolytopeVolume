@@ -1,10 +1,10 @@
 #include <iomanip>
 #include <map>
-#include "Geometry.hpp"
 #include "Msg.hpp"
 #include "Polyhedron.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
+#include "Vertex.hpp"
 #include "VertexFactory.hpp"
 
 
@@ -262,7 +262,7 @@ void Polyhedron::initializePlanes(void) {
                 if (i != j && i != k && j != k)
                     {
                     Vertex* intersectionPoint = vf.getVertex();
-                    bool planesIntersect = Geometry::intersect(*planes[i], *planes[j], *planes[k], *intersectionPoint);
+                    bool planesIntersect = intersect(*planes[i], *planes[j], *planes[k], *intersectionPoint);
                     if (planesIntersect == true && isValid(*intersectionPoint) == true)
                         {
                         // add intersection Vector to planes map
@@ -338,6 +338,47 @@ void Polyhedron::insertVertex(Plane* p1, Plane* p2, Vertex* v) {
         it->second.push_back(v);
         }
 }
+
+bool Polyhedron::intersect(Plane& plane1, Plane& plane2, Plane& plane3, Vector& intersection) {
+
+    mpq_class& a1 = plane1.getA();
+    mpq_class& b1 = plane1.getB();
+    mpq_class& c1 = plane1.getC();
+    mpq_class& d1 = plane1.getD();
+    mpq_class& a2 = plane2.getA();
+    mpq_class& b2 = plane2.getB();
+    mpq_class& c2 = plane2.getC();
+    mpq_class& d2 = plane2.getD();
+    mpq_class& a3 = plane3.getA();
+    mpq_class& b3 = plane3.getB();
+    mpq_class& c3 = plane3.getC();
+    mpq_class& d3 = plane3.getD();
+
+    mpq_class detA  = a1 * (b2 * c3 - c2 * b3) + b1 * (c2 * a3 - a2 * c3) + c1 * (a2 * b3 - b2 * a3);
+    if (detA == 0)
+        return false;
+    mpq_class detAx = -d1 * (b2 * c3 - c2 * b3) - d2 * (b3 * c1 - c3 * b1) - d3 * (b1 * c2 - c1 * b2);
+    mpq_class detAy = -d1 * (c2 * a3 - a2 * c3) - d2 * (c3 * a1 - a3 * c1) - d3 * (c1 * a2 - a1 * c2);
+    mpq_class detAz = -d1 * (a2 * b3 - b2 * a3) - d2 * (a3 * b1 - b3 * a1) - d3 * (a1 * b2 - b1 * a2);
+    
+#   if 0
+    std::cout << "detA  = " << detA << std::endl;
+    std::cout << "detAx = " << detAx << std::endl;
+    std::cout << "detAy = " << detAy << std::endl;
+    std::cout << "detAz = " << detAz << std::endl;
+#   endif
+    
+    mpq_class x = detAx / detA;
+    mpq_class y = detAy / detA;
+    mpq_class z = detAz / detA;
+    
+    intersection.setX(x);
+    intersection.setY(y);
+    intersection.setZ(z);
+    
+    return true;
+}
+
 
 bool Polyhedron::isValid(Vector& pt) {
 

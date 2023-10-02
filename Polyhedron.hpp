@@ -5,9 +5,7 @@
 #include <vector>
 #include <gmpxx.h>
 #include <string>
-#include "Geometry.hpp"
 #include "Plane.hpp"
-class Facet;
 class Vector;
 class Vertex;
 
@@ -37,6 +35,7 @@ class Polyhedron {
         void                initializeFacets(void);
         void                initializePlanes(void);
         void                insertVertex(Plane* p1, Plane* p2, Vertex* v);
+        bool                intersect(Plane& plane1, Plane& plane2, Plane& plane3, Vector& intersection);
         bool                isValid(Vector& pt);
         std::string         mathematicaPolyhedronOutput(void);
         void                sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt);

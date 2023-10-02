@@ -1,6 +1,5 @@
 #include <iomanip>
 #include <iostream>
-#include "Geometry.hpp"
 #include "Plane.hpp"
 
 
