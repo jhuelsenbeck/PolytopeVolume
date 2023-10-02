@@ -11,11 +11,11 @@
 
 Polyhedron::Polyhedron(void) {
     
-    zeroQ = 0;
-    oneQ = 1;
-    oneHalfQ = 1;
+    zeroQ     = 0;
+    oneQ      = 1;
+    oneHalfQ  = 1;
     oneHalfQ /= 2;
-    twoQ = 2;
+    twoQ      = 2;
     
     randomlySample = false;
     mathematicaPolyhedron = false;
@@ -32,6 +32,7 @@ Polyhedron::Polyhedron(void) {
     left.set( Vector(zeroQ, zeroQ, zeroQ), Vector(zeroQ,  oneQ, zeroQ), Vector(zeroQ,  oneQ,  oneQ) );
     right.set( Vector( oneQ, zeroQ, zeroQ), Vector( oneQ,  oneQ, zeroQ), Vector( oneQ,  oneQ,  oneQ) );
 
+    // planes persist and live in the planes vector
     planes.push_back(&front);
     planes.push_back(&back);
     planes.push_back(&top);
@@ -45,81 +46,69 @@ Polyhedron::Polyhedron(void) {
     planes.push_back(&yz1);
     planes.push_back(&yz2);
     
+    // initialize the volume
     polytopeVolume = 0.0;
 }
 
-void Polyhedron::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpf_class& vol) {
+Polyhedron::~Polyhedron(void) {
 
-    mpq_class a = v1->getX() - oneHalfQ;
-    mpq_class b = v2->getX() - oneHalfQ;
-    mpq_class c = v3->getX() - oneHalfQ;
-    mpq_class d = v1->getY() - oneHalfQ;
-    mpq_class e = v2->getY() - oneHalfQ;
-    mpq_class f = v3->getY() - oneHalfQ;
-    mpq_class g = v1->getZ() - oneHalfQ;
-    mpq_class h = v2->getZ() - oneHalfQ;
-    mpq_class i = v3->getZ() - oneHalfQ;
+}
+
+void Polyhedron::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpq_class& vol) {
+
+    aQ = v1->getX() - oneHalfQ;
+    bQ = v2->getX() - oneHalfQ;
+    cQ = v3->getX() - oneHalfQ;
+    dQ = v1->getY() - oneHalfQ;
+    eQ = v2->getY() - oneHalfQ;
+    fQ = v3->getY() - oneHalfQ;
+    gQ = v1->getZ() - oneHalfQ;
+    hQ = v2->getZ() - oneHalfQ;
+    iQ = v3->getZ() - oneHalfQ;
     
     // volume is 1/6 of the determinant
-    vol = (a * e * i) - (a * f * h) - (b * d * i) + (b * f * g) + (c * d * h) - (c * e * g);
+    vol = (aQ * eQ * iQ) - (aQ * fQ * hQ) - (bQ * dQ * iQ) + (bQ * fQ * gQ) + (cQ * dQ * hQ) - (cQ * eQ * gQ);
     vol /= 6;
     if (vol < 0)
         vol = -vol;
-
-    /*mpq_class x1 = v2->getX() - v1->getX();
-    mpq_class y1 = v2->getY() - v1->getY();
-    mpq_class z1 = v2->getZ() - v1->getZ();
-    mpq_class x2 = v3->getX() - v1->getX();
-    mpq_class y2 = v3->getY() - v1->getY();
-    mpq_class z2 = v3->getZ() - v1->getZ();
-    
-    mpq_class x3 = y1 * z2 - y2 * z1;
-    mpq_class y3 = x1 * z2 - x2 * z1;
-    mpq_class z3 = x1 * y2 - x2 * y1;
-    
-    mpq_class u = (x3 * x3) + (y3 * y3) + (z3 * z3);
-    u /= 4;
-    mpf_class uF = u;
-    mpf_class area = sqrt(uF);
-    vol = area * dist / 3.0;
-    
-    std::cout << vol.get_d() << " <-> " << determinant.get_d() << std::endl;*/
 }
 
-mpq_class Polyhedron::facetArea(Vertex* first, Plane* pln) {
+void Polyhedron::clearTetrahedraMap(void) {
 
-    Vector unitNormal;
-    pln->normal(unitNormal);
-    unitNormal.normalize();
+    for (vector_volume_map::iterator it = tetrahedra.begin(); it != tetrahedra.end(); it++)
+        delete it->first;
+    tetrahedra.clear();
+}
 
-    mpq_class normalLengthRational = (unitNormal.getX() * unitNormal.getX()) + (unitNormal.getY() * unitNormal.getY()) + (unitNormal.getZ() * unitNormal.getZ());
-    mpf_class normalLengthReal = normalLengthRational;
-    normalLengthReal = sqrt(normalLengthReal);
-    normalLengthRational = normalLengthReal;
-    mpq_class normalLengthInv = 1 / normalLengthRational;
-    mpq_class& x = unitNormal.getX();
-    mpq_class& y = unitNormal.getY();
-    mpq_class& z = unitNormal.getZ();
-    x *= normalLengthInv;
-    y *= normalLengthInv;
-    z *= normalLengthInv;
+void Polyhedron::facetVolume(std::vector<Vertex*>& vertices, mpq_class& vol) {
 
-    Vertex* v = first;
-    Vector sumCrossProducts;
-    Vector cross;
+    Vector pt;
+    Vertex* v1 = vertices[0];
+    Vertex* p = v1->getTo();
     do
         {
-        Geometry::crossProduct(*v, *(v->getTo()), cross);
-        sumCrossProducts += cross;
-        v = v->getTo();
-        } while (v != first);
-    mpq_class dot = Geometry::dotProduct(unitNormal, sumCrossProducts);
-    if (dot < 0)
-        dot = -dot;
-    mpq_class facetArea = dot / 2;
-
-    return facetArea;
+        // form triangulation, with v1 common to all triangulations of this facet
+        Vertex* v2 = p;
+        Vertex* v3 = p->getTo();
+        
+        // calculate volume
+        mpq_class tetrahedronVolume;
+        calculateTetrahedronVolume(v1, v2, v3, tetrahedronVolume);
+        vol += tetrahedronVolume;
+        
+        // add a random point from tetrahedron to tetrahedra map for later use
+        if (randomlySample == true)
+            {
+            Vector* newV = new Vector(pt);
+            sampleTetrahedron(&center, v1, v2, v3, *newV);
+            tetrahedra.insert( std::make_pair(newV, tetrahedronVolume) );
+            }
+        
+        // on to the next triangulation
+        p = v3;
+        } while (p->getTo() != v1);
 }
+
 
 Vertex* Polyhedron::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
 
@@ -155,14 +144,13 @@ Vertex* Polyhedron::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
 
 void Polyhedron::initializeFacets(void) {
     
-    tetrahedra.clear();
-        
+    clearTetrahedraMap();
+
     mpq_class vol;
     polytopeVolume = 0.0;
+    // loop over all planes/facets of the polyhedron
     for (auto pln : verticesMap)
         {
-        mpf_class distance = pln.first->getDistance(center);
-
         // clean vertices
         for (int i=0, n=(int)pln.second.size(); i<n; i++)
             {
@@ -180,26 +168,16 @@ void Polyhedron::initializeFacets(void) {
             v = nextV;
             } while (v != first);
             
+        // calculate the facet volume and (potentially) randomly sample
         facetVolume(pln.second, vol);
-        
-        // get the facet area
-        mpq_class facetBaseArea = facetArea(first, pln.first);
-                
-        // calculate the pyramid volume
-        facetBaseArea /= 3;
-        mpf_class facetBaseAreaF = facetBaseArea;
-        polytopeVolume += facetBaseAreaF * distance;
-        
-        // triangluate and sample from each tetrahedron
-        if (randomlySample == true)
-            sampleTetrahedra(pln.second, distance);
         }
-        
+    polytopeVolume = vol;
+    
     if (randomlySample == true)
         {
-        mpf_class u = RandomVariable::randomVariableInstance().uniformRv();
+        mpq_class u = RandomVariable::randomVariableInstance().uniformRv();
         u *= polytopeVolume;
-        mpf_class sumVol;
+        mpq_class sumVol;
         for (auto tet : tetrahedra)
             {
             sumVol += tet.second;
@@ -209,12 +187,8 @@ void Polyhedron::initializeFacets(void) {
                 break;
                 }
             }
-            
-        for (auto tet : tetrahedra)
-            delete tet.first;
-        tetrahedra.clear();
+        clearTetrahedraMap();
         }
-    //std::cout << polytopeVolume.get_d() << " <-> " << vol.get_d() << std::endl;
 }
 
 void Polyhedron::initializePlanes(void) {
@@ -269,11 +243,11 @@ void Polyhedron::initializePlanes(void) {
     yz1.set( zero_Zero_yzMaxA, zero_One_yzMaxB, one_Zero_yzMaxA );
     yz2.set( zero_Zero_yzMinA, zero_One_yzMinB, one_Zero_yzMinA );
     
-    // empty out the tetrahedra map in preparation for finding random points in
-    // in a triangulation of the polyhedron
+    // empty out the tetrahedra map in preparation for finding random points
+    // in triangulations of the polyhedron
     if (randomlySample == true)
-        tetrahedra.clear();
-            
+        clearTetrahedraMap();
+        
     // note that this checks all 12 choose 3 combinations of planes for intersection even though
     // six pairs of the planes are parallel to one another!
     VertexFactory& vf = VertexFactory::vertexFactoryInstance();
@@ -409,14 +383,12 @@ std::string Polyhedron::mathematicaPolyhedronOutput(void) {
  
     std::cout << std::fixed << std::setprecision(5);
     std::string str = "Graphics3D[{";
-    tetrahedra.clear();
+    clearTetrahedraMap();
     mpq_class vol;
     polytopeVolume = 0.0;
     int cnt = 0;
     for (auto pln : verticesMap)
         {
-        mpf_class distance = pln.first->getDistance(center);
-
         // clean vertices
         for (int i=0, n=(int)pln.second.size(); i<n; i++)
             {
@@ -481,7 +453,6 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
     setWeights(W);
     mathematicaPolyhedron = false;
     
-    RandomVariable& rng = RandomVariable::randomVariableInstance();
     int numPoints = 2000;
     Vector pt;
     randomlySample = true;
@@ -494,6 +465,7 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
         mpq_class& x = randomPoint.getX();
         mpq_class& y = randomPoint.getY();
         mpq_class& z = randomPoint.getZ();
+        
         x -= oneHalfQ;
         y -= oneHalfQ;
         z -= oneHalfQ;
@@ -508,66 +480,14 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
         pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
         if (isValid(pt) == false)
             Msg::error("Random point is not in polyhedron");
+            
         std::cout << pt.getStr();
         if (i+1 != numPoints)
             std::cout << ",";
         }
-    std::cout << "}, PlotRange -> {{0, 1}, {0, 1}, {0, 1}}, BoxStyle -> Dashed, PlotStyle -> {Blue, PointSize[0.01]},BoxRatios -> 1, LabelStyle -> Opacity[0], Ticks -> None]" << std::endl;
+    std::cout << "}, PlotRange -> {{0, 1}, {0, 1}, {0, 1}}, BoxStyle -> Dashed, PlotStyle -> {Blue, PointSize[0.003]},BoxRatios -> 1, LabelStyle -> Opacity[0], Ticks -> None]" << std::endl;
     
     randomlySample = false;
-}
-
-void Polyhedron::facetVolume(std::vector<Vertex*>& vertices, mpq_class& vol) {
-
-    Vector pt;
-    Vertex* f = vertices[0];
-    Vertex* p = f->getTo();
-    Vertex* v1 = f; // point common to all triangulations of this facet
-    do
-        {
-        // form triangulation
-        Vertex* v2 = p;
-        Vertex* v3 = p->getTo();
-        
-        // calculate volume
-        mpf_class tetrahedronVolume;
-        calculateTetrahedronVolume(v1, v2, v3, tetrahedronVolume);
-        vol += tetrahedronVolume;
-        
-        // add a random point from tetrahedron to tetrahedra map for latter use
-        Vector* newV = new Vector(pt);
-        sampleTetrahedron(&center, v1, v2, v3, *newV);
-        tetrahedra.insert( std::make_pair(newV,tetrahedronVolume) );
-        
-        // on to the next triangulation
-        p = v3;
-        } while (p->getTo() != f);
-}
-
-void Polyhedron::sampleTetrahedra(std::vector<Vertex*>& vertices, mpf_class& d) {
-
-    Vector pt;
-    Vertex* f = vertices[0];
-    Vertex* p = f->getTo();
-    Vertex* v1 = f; // point common to all triangulations of this facet
-    do
-        {
-        // form triangulation
-        Vertex* v2 = p;
-        Vertex* v3 = p->getTo();
-        
-        // calculate volume
-        mpf_class tetrahedronVolume;
-        calculateTetrahedronVolume(v1, v2, v3, tetrahedronVolume);
-        
-        // add a random point from tetrahedron to tetrahedra map for latter use
-        Vector* newV = new Vector(pt);
-        sampleTetrahedron(&center, v1, v2, v3, *newV);
-        tetrahedra.insert( std::make_pair(newV,tetrahedronVolume) );
-        
-        // on to the next triangulation
-        p = v3;
-        } while (p->getTo() != f);
 }
 
 void Polyhedron::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt) {
@@ -604,79 +524,40 @@ void Polyhedron::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vecto
     pt.set(x, y, z); // Vector pt = v0*a + v1*s + v2*t + v3*u;
 }
 
-void Polyhedron::sampleTetrahedron(Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt, double shrinkageFactor) {
-
-    RandomVariable& rng = RandomVariable::randomVariableInstance();
-    
-    mpq_class factor = shrinkageFactor;
-    mpq_class oneHalf = 1;
-    oneHalf /= 2;
-    
-    Vector newV1(*v1);
-    Vector newV2(*v2);
-    Vector newV3(*v3);
-    
-    mpq_class s = rng.uniformRv();
-    mpq_class t = rng.uniformRv();
-    mpq_class u = rng.uniformRv();
-
-    if (s + t > 1)
-        {
-        // cut'n fold the cube into a prism
-        s = 1 - s;
-        t = 1 - t;
-        }
-    if (t + u > 1)
-        {
-        // cut'n fold the prism into a tetrahedron
-        mpq_class tmp = u;
-        u = 1 - s - t;
-        t = 1 - tmp;
-        }
-    else if (s + t + u > 1)
-        {
-        mpq_class tmp = u;
-        u = s + t + u - 1;
-        s = 1 - t - tmp;
-        }
-    mpq_class a = 1 - s - t - u; // a,s,t,u are the barycentric coordinates of the random point.
-    mpq_class x = center->getX() * a + newV1.getX() * s + newV2.getX() * t + newV3.getX() * u;
-    mpq_class y = center->getY() * a + newV1.getY() * s + newV2.getY() * t + newV3.getY() * u;
-    mpq_class z = center->getZ() * a + newV1.getZ() * s + newV2.getZ() * t + newV3.getZ() * u;
-    pt.set(x, y, z); // Vector pt = v0*a + v1*s + v2*t + v3*u;
-}
-
 void Polyhedron::setWeights(std::vector<mpq_class>& W) {
 
     // extract symbols from W
-    wAC = W[0];
-    wAG = W[1];
-    wAT = W[2];
-    wCG = W[3];
-    wCT = W[4];
-    wGT = W[5];
+    this->wAC = W[0];
+    this->wAG = W[1];
+    this->wAT = W[2];
+    this->wCG = W[3];
+    this->wCT = W[4];
+    this->wGT = W[5];
     
+    // construct polyhedron
     initializePlanes();
 }
 
-mpf_class Polyhedron::volume(std::vector<mpq_class>& W) {
+mpq_class Polyhedron::volume(std::vector<mpq_class>& W) {
 
     setWeights(W);
     return polytopeVolume;
 }
 
-mpf_class Polyhedron::volume(std::vector<mpq_class>& W, Vector& pt) {
+mpq_class Polyhedron::volume(std::vector<mpq_class>& W, Vector& pt) {
 
     randomlySample = true;
     setWeights(W);
+    
     pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
     if (isValid(pt) == false)
         Msg::error("Random point is not in polyhedron");
     randomlySample = false;
+    
     return polytopeVolume;
 }
 
-mpf_class Polyhedron::volume(std::vector<mpq_class>& W, Vector& pt, double fac) {
+mpq_class Polyhedron::volume(std::vector<mpq_class>& W, Vector& pt, double fac) {
 
     randomlySample = true;
     setWeights(W);
@@ -698,5 +579,6 @@ mpf_class Polyhedron::volume(std::vector<mpq_class>& W, Vector& pt, double fac) 
     if (isValid(pt) == false)
         Msg::error("Random point is not in polyhedron");
     randomlySample = false;
+    
     return polytopeVolume;
 }
