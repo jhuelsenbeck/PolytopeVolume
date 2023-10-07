@@ -14,67 +14,11 @@ std::vector<mpq_class> initializeRateMatrix(void);
 
 int main(int argc, const char* argv[]) {
 
-#   if 0
-    RandomVariable& rng = RandomVariable::randomVariableInstance();
-    
-    std::vector<double> alphaF(4, 10);
-    std::vector<double> f(4);
-    std::vector<double> alphaR(6, 10);
-    std::vector<double> r(6);
-    double Q[4][4];
-
-    int nReps = 1000000;
-    double averageMu = 0.0;
-    double diff = 0.0;
-    for (int rep=0; rep<nReps; rep++)
-        {
-        Probability::Dirichlet::rv(&rng, alphaF, f);
-        Probability::Dirichlet::rv(&rng, alphaR, r);
-        Probability::Helper::normalize(f, 10e-5);
-        Probability::Helper::normalize(r, 10e-5);
-        
-        double lnTraditional = log(5.0) + log(4.0) + log(3.0) + log(2.0) + log(1.0);
-        double lnScaled      = log(5.0) + log(4.0) + log(3.0) + log(2.0) + log(1.0);
-        lnScaled += log(4.0) + 0.5 * log(3.0);
-        for (int i=0; i<4; i++)
-            lnScaled += 3.0 * log(f[i]);
-        //std::cout << lnTraditional << " <-> " << lnScaled << " -- " << lnTraditional - lnScaled << std::endl;
-        diff += (lnTraditional - lnScaled);
-        
-        for (int i=0, k=0; i<4; i++)
-            {
-            for (int j=i+1; j<4; j++)
-                {
-                Q[i][j] = r[k] * f[j];
-                Q[j][i] = r[k] * f[i];
-                k++;
-                }
-            }
-        double averageRate = 0.0;
-        for (int i=0; i<4; i++)
-            {
-            double sum = 0.0;
-            for (int j=0; j<4; j++)
-                {
-                if (i != j)
-                    {
-                    sum += Q[i][j];
-                    averageRate += f[i] * Q[i][j];
-                    }
-                }
-            Q[i][i] = -sum;
-            }
-        double mu = 1.0 / averageRate;
-        averageMu += mu;
-        }
-    std::cout << "u = " << averageMu / nReps << std::endl;
-    std::cout << "diff = " << diff / nReps << std::endl;
-#   endif
-
     // interface, such as it is
-    int numCycles = 1;
+    int numCycles = 100000;
 
     McmcState state;
+    state.setAlphaT(1.0);
     double lnLikelihoodRatio = 0.0;
     double curLnPrior = state.lnPriorProbability();
     int reversibleCount = 0;
@@ -110,7 +54,7 @@ int main(int argc, const char* argv[]) {
     
     
     
-#if 1
+#if 0
     Vector randomPoint;
     Polyhedron poly;
     std::vector<mpq_class> W = initializeRateMatrix();

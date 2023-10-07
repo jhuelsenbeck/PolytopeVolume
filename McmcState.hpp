@@ -7,6 +7,7 @@
 #include "RateMatrix.hpp"
 class RandomVariable;
 
+enum UpdateType { ToNR, ToR, Pi, ExchR, NRrates };
 
 
 class McmcState {
@@ -16,7 +17,8 @@ class McmcState {
         std::vector<mpq_class>& getWeights(void) { return W; }
         bool                    accept(double lnP);
         bool                    getIsTimeReversible(void) { return isTimeReversible; }
-        double                  lnPriorProbability();
+        double                  lnPriorProbability(void);
+        void                    setAlphaT(double x);
         std::string             stateString(void);
         double                  update(std::string& updateType);
         void                    updateForAcceptance(void);
@@ -46,6 +48,7 @@ class McmcState {
         RateMatrix              storedQ;
         std::vector<mpq_class>  storedPi;
         std::vector<mpq_class>  storedR;
+        UpdateType              updateType;
 };
 
 #endif
