@@ -1,10 +1,10 @@
 #include <iomanip>
 #include <map>
 #include "MpqRateMatrix.hpp"
-#include "Msg.hpp"
 #include "Polyhedron.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
+#include "RbException.h"
 #include "Vertex.hpp"
 #include "VertexFactory.hpp"
 
@@ -170,7 +170,7 @@ void Polyhedron::facetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_cla
                 //std::cout << b1.get_d() << " " << b2.get_d() << " " << b3.get_d() << " " << b4.get_d() << " " << std::endl;
                 alphaC = b1.get_d();
                 if (pointFoundInPolyhedron == true)
-                    Msg::error("Point already found in polyhedron");
+                    throw(RbException("Polyhedron: Point already found in polyhedron"));
                 pointFoundInPolyhedron = true;
                 mpq_class x = center.getX() * b1 + v1->getX() * b2 + v2->getX() * b3 + v3->getX() * b4;
                 mpq_class y = center.getY() * b1 + v1->getY() * b2 + v2->getY() * b3 + v3->getY() * b4;
@@ -178,11 +178,7 @@ void Polyhedron::facetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_cla
                 Vector t;
                 t.set(x, y, z); // Vector pt = v0*a + v1*s + v2*t + v3*u;
                 if (t != randomPoint)
-                    {
-                    std::cout << randomPoint << std::endl;
-                    std::cout << t << std::endl;
-                    Msg::error("Problem with pt");
-                    }
+                    throw(RbException("Polyhedron: Test point does not match random point"));
                 }
             }
         
@@ -643,7 +639,7 @@ double Polyhedron::lnProbabilityForward(std::vector<mpq_class>& W, Vector& pt) {
     // initialize pt to the randomly selected point and do a sanity check
     pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
     if (isValid(pt) == false)
-        Msg::error("Random point is not in polyhedron");
+        throw(RbException("Polyhedron: Random point is not in polyhedron"));
     randomlySample = false;
     
     // calculate the probability of the randomly proposed point, pt
@@ -663,9 +659,9 @@ double Polyhedron::lnProbabilityReverse(std::vector<mpq_class>& W, Vector& pt) {
     
     // some sanity checks
     if (isValid(pt) == false)
-        Msg::error("Point representing reverse move not in polyhedron");
+        throw(RbException("Polyhedron: Point representing reverse move not in polyhedron"));
     if (pointFoundInPolyhedron == false)
-        Msg::error("Didn't find point in polyhedron");
+        throw(RbException("Polyhedron: Did not find point in polyhedron"));
     
     // calculate the probability of proposing the point, pt, passed in as a parameter
     double lnProb = log(sumJacobians.get_den().get_d()) - log(sumJacobians.get_num().get_d());
@@ -775,7 +771,7 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
         z += oneHalfQ;
         pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
         if (isValid(pt) == false)
-            Msg::error("Random point is not in polyhedron");
+            throw(RbException("Polyhedron: Random point is not in polyhedron"));
             
         std::cout << pt.getStr();
         if (i+1 != numPoints)
