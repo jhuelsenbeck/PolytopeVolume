@@ -154,11 +154,11 @@ class Polyhedron {
         void                print(std::vector<mpq_class>& W);
     
     private:
+        void                calculateFacetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_class& vol);
         void                calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpq_class& vol);
         void                clearTetrahedraMap(void);
         void                computeLandU(MpqMatrix& aMat, MpqMatrix& lMat, MpqMatrix& uMat);
         mpq_class           det(MpqMatrix& m);
-        void                facetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_class& vol);
         Vertex*             findOtherVertex(Vertex* from, Vertex* v, Plane* pln);
         void                initializeFacets(void);
         void                initializePlanes(void);

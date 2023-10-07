@@ -28,7 +28,7 @@ int main(int argc, const char* argv[]) {
         double lnProposalRatio = state.update(updateType);
         double newLnPrior = state.lnPriorProbability();
         double lnPriorRatio = newLnPrior - curLnPrior;
-        
+
         std::cout << std::fixed << std::setprecision(6);
         std::cout << std::setw(5) << n << " -- " << std::setw(9) << lnPriorRatio << " " << std::setw(9) << lnProposalRatio << " " << updateType << " -- ";
         if (state.accept(lnLikelihoodRatio + lnPriorRatio + lnProposalRatio) == true)

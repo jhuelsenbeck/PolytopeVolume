@@ -86,37 +86,12 @@ bool Plane::operator<(const Plane& rhs) const {
     return false;
 }
 
-mpf_class Plane::getDistance(Vector& point) {
-
-    // Distance = (| a*x1 + b*y1 + c*z1 + d |) / (sqrt( a*a + b*b + c*c))
-    mpq_class& x1 = point.getX();
-    mpq_class& y1 = point.getY();
-    mpq_class& z1 = point.getZ();
-    mpq_class dot = a * a + b * b + c * c;
-    if (dot <= 0)
-        return mpq_class(0);
-    mpq_class numerQ = a * x1 + b * y1 + c * z1 + d;
-    if (numerQ < 0)
-        numerQ = -numerQ;
-    mpf_class numer(numerQ, 1000);
-    mpf_class denom(dot, 1000);
-    mpf_class distF = numer / sqrt(denom);
-    return distF;
-}
-
 std::string Plane::getStr(void) {
 
     std::string str = "(";
     str += std::to_string(a.get_d()) + ", " + std::to_string(b.get_d()) + ", " + std::to_string(c.get_d()) + ", " + std::to_string(d.get_d());
     str += ")";
     return str;
-}
-
-void Plane::normal(Vector& n) {
-
-    n.x = a;
-    n.y = b;
-    n.z = c;
 }
 
 void Plane::set(Vector pt1, Vector pt2, Vector pt3) {

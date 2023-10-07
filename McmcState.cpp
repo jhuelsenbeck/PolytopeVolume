@@ -423,7 +423,7 @@ void McmcState::updateForRejection(void) {
             pi[i] = storedPi[i];
         }
         
-    if (updateType == ExchR)
+    if (updateType == ExchR || updateType == ToR)
         {
         for (int i=0; i<6; i++)
             r[i] = storedR[i];
@@ -547,9 +547,10 @@ double McmcState::updateToNonReversible(void) {
     Q(T,G) = 2 * (pi[G]/pi[T]) * storedQ(G,T) * (1 - u3);
     
     // update the diagonal components of the rate matrix
+    mpq_class sum;
     for (int i=0; i<4; i++)
         {
-        mpq_class sum;
+        sum = 0;
         for (int j=0; j<4; j++)
             {
             if (i != j)
@@ -587,15 +588,17 @@ double McmcState::updateToReversible(void) {
 
     // store old values
     storedQ = Q;
+    storedR = r;
     storedIsTimeReversible = isTimeReversible;
     
     //calculateStationaryFrequencies(); // should not be necessary
 
     // average rates with same stationary frequencies
     mpq_class averageRate;
+    mpq_class sum;
     for (int i=0; i<4; i++)
         {
-        mpq_class sum;
+        sum = 0;
         for (int j=0; j<4; j++)
             {
             if (i != j)
@@ -609,9 +612,9 @@ double McmcState::updateToReversible(void) {
         }
         
     // make certain average rate is one
-    mpq_class factor = 1 / averageRate;
-    if (factor != 1)
+    if (averageRate != 1)
         {
+        mpq_class factor = 1 / averageRate;
         std::cout << "Warning: the average rate should be one in updateToReversible" << std::endl;
         for (int i=0; i<4; i++)
             for (int j=0; j<4; j++)
@@ -632,7 +635,7 @@ double McmcState::updateToReversible(void) {
     double lnJacobian = log(piC) + 2.0 * log(piG);
     lnJacobian -= (log(8.0) + log(wCG + wGC) + log(wCT + wTC) + log(wGT + wTG));
     
-    // polyhedron density for reverse move
+    // polyhedron parameters
     W[0] = pi[A] * Q(A,C);
     W[1] = pi[A] * Q(A,G);
     W[2] = pi[A] * Q(A,T);
@@ -644,8 +647,7 @@ double McmcState::updateToReversible(void) {
     mpq_class u1 = storedQ(C,G) / (2 * Q(C,G));
     mpq_class u2 = storedQ(C,T) / (2 * Q(C,T));
     mpq_class u3 = storedQ(G,T) / (2 * Q(G,T));
-    Vector pt;
-    pt.set(u1, u2, u3);
+    Vector pt(u1, u2, u3);
     double lnRv = poly.lnProbabilityReverse(W, pt);
 
     // figure out exchangability rates
@@ -655,7 +657,7 @@ double McmcState::updateToReversible(void) {
     r[3] = Q(C,G) / pi[C];
     r[4] = Q(C,T) / pi[C];
     r[5] = Q(G,T) / pi[G];
-    mpq_class sum;
+    sum = 0;
     for (int i=0; i<6; i++)
         sum += r[i];
     for (int i=0; i<6; i++)

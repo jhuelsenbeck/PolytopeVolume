@@ -72,66 +72,13 @@ Polyhedron::Polyhedron(void) {
 }
 
 /**
- * Calculate the volume (up to a constant of 1/6) of a tetrahedron. I know that a tetrahedron is
- * formed from four vertices, but here we pass in three vectors, which are calculated by subtracting
- * one of the vertices (in this case the center point) from the other three.
- *
- * \param[in]    v1        The first vector
- * \param[in]    v2        The second vector
- * \param[in]    v3        The third vector
- * \param[in]    vol       A reference to the volume of the tetrahedron, passed in as a reference
- *                         to avoid copying of a mpq_class object
- */
-void Polyhedron::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpq_class& vol) {
-
-    aQ = v1->getX() - oneHalfQ;
-    bQ = v2->getX() - oneHalfQ;
-    cQ = v3->getX() - oneHalfQ;
-    dQ = v1->getY() - oneHalfQ;
-    eQ = v2->getY() - oneHalfQ;
-    fQ = v3->getY() - oneHalfQ;
-    gQ = v1->getZ() - oneHalfQ;
-    hQ = v2->getZ() - oneHalfQ;
-    iQ = v3->getZ() - oneHalfQ;
-    
-    // volume is 1/6 of the determinant
-    vol = (aQ * eQ * iQ) - (aQ * fQ * hQ) - (bQ * dQ * iQ) + (bQ * fQ * gQ) + (cQ * dQ * hQ) - (cQ * eQ * gQ);
-    //vol /= 6;                  // this will be taken care of in the probability density with a Gamma factor that will reduce to 3! = 6 in the
-    if (vol < 0)
-        vol = -vol;
-}
-
-void Polyhedron::clearTetrahedraMap(void) {
-
-    for (vector_volume_map::iterator it = tetrahedra.begin(); it != tetrahedra.end(); it++)
-        delete it->first;
-    tetrahedra.clear();
-}
-
-/**
- * Hard-wired determinant of a 4 X 4 matrix of GMP rationals.
- */
-mpq_class Polyhedron::det(MpqMatrix& m) {
-
-    mpq_class d = m(0,3) * m(1,2) * m(2,1) * m(3,0) - m(0,2) * m(1,3) * m(2,1) * m(3,0) - m(0,3) * m(1,1) * m(2,2) * m(3,0) +
-                  m(0,1) * m(1,3) * m(2,2) * m(3,0) + m(0,2) * m(1,1) * m(2,3) * m(3,0) - m(0,1) * m(1,2) * m(2,3) * m(3,0) -
-                  m(0,3) * m(1,2) * m(2,0) * m(3,1) + m(0,2) * m(1,3) * m(2,0) * m(3,1) + m(0,3) * m(1,0) * m(2,2) * m(3,1) -
-                  m(0,0) * m(1,3) * m(2,2) * m(3,1) - m(0,2) * m(1,0) * m(2,3) * m(3,1) + m(0,0) * m(1,2) * m(2,3) * m(3,1) +
-                  m(0,3) * m(1,1) * m(2,0) * m(3,2) - m(0,1) * m(1,3) * m(2,0) * m(3,2) - m(0,3) * m(1,0) * m(2,1) * m(3,2) +
-                  m(0,0) * m(1,3) * m(2,1) * m(3,2) + m(0,1) * m(1,0) * m(2,3) * m(3,2) - m(0,0) * m(1,1) * m(2,3) * m(3,2) -
-                  m(0,2) * m(1,1) * m(2,0) * m(3,3) + m(0,1) * m(1,2) * m(2,0) * m(3,3) + m(0,2) * m(1,0) * m(2,1) * m(3,3) -
-                  m(0,0) * m(1,2) * m(2,1) * m(3,3) - m(0,1) * m(1,0) * m(2,2) * m(3,3) + m(0,0) * m(1,1) * m(2,2) * m(3,3);
-    return d;
-}
-
-/**
  * Find the volume of a polyhedron formed by the facet vertices and the center point, (1/2,1/2,1/2).
  *
  * \param[in]    pln       The plane for the facet
  * \param[in]    vertices  The vertices of the facet
  * \param[in]    vol       A reference to the volume, which will be added to
  */
-void Polyhedron::facetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_class& vol) {
+void Polyhedron::calculateFacetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_class& vol) {
 
     // loop over triangulations of the facet
     Vector pt;
@@ -187,6 +134,58 @@ void Polyhedron::facetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_cla
         } while (p->getTo() != v1);
 }
 
+/**
+ * Calculate the volume (up to a factor of 1/6) of a tetrahedron. I know that a tetrahedron is
+ * formed from four vertices, but here we pass in three vectors, which are calculated by subtracting
+ * one of the vertices (in this case the center point) from the other three.
+ *
+ * \param[in]    v1        The first vector
+ * \param[in]    v2        The second vector
+ * \param[in]    v3        The third vector
+ * \param[in]    vol       A reference to the volume of the tetrahedron, passed in as a reference
+ *                         to avoid copying of a mpq_class object
+ */
+void Polyhedron::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpq_class& vol) {
+
+    aQ = v1->getX() - oneHalfQ;
+    bQ = v2->getX() - oneHalfQ;
+    cQ = v3->getX() - oneHalfQ;
+    dQ = v1->getY() - oneHalfQ;
+    eQ = v2->getY() - oneHalfQ;
+    fQ = v3->getY() - oneHalfQ;
+    gQ = v1->getZ() - oneHalfQ;
+    hQ = v2->getZ() - oneHalfQ;
+    iQ = v3->getZ() - oneHalfQ;
+    
+    // volume is 1/6 of the determinant
+    vol = (aQ * eQ * iQ) - (aQ * fQ * hQ) - (bQ * dQ * iQ) + (bQ * fQ * gQ) + (cQ * dQ * hQ) - (cQ * eQ * gQ);
+    //vol /= 6;                  // this will be taken care of in the probability density with a Gamma factor of 3! = 6
+    if (vol < 0)
+        vol = -vol;
+}
+
+void Polyhedron::clearTetrahedraMap(void) {
+
+    for (vector_volume_map::iterator it = tetrahedra.begin(); it != tetrahedra.end(); it++)
+        delete it->first;
+    tetrahedra.clear();
+}
+
+/**
+ * Hard-wired determinant of a 4 X 4 matrix of GMP rationals.
+ */
+mpq_class Polyhedron::det(MpqMatrix& m) {
+
+    mpq_class d = m(0,3) * m(1,2) * m(2,1) * m(3,0) - m(0,2) * m(1,3) * m(2,1) * m(3,0) - m(0,3) * m(1,1) * m(2,2) * m(3,0) +
+                  m(0,1) * m(1,3) * m(2,2) * m(3,0) + m(0,2) * m(1,1) * m(2,3) * m(3,0) - m(0,1) * m(1,2) * m(2,3) * m(3,0) -
+                  m(0,3) * m(1,2) * m(2,0) * m(3,1) + m(0,2) * m(1,3) * m(2,0) * m(3,1) + m(0,3) * m(1,0) * m(2,2) * m(3,1) -
+                  m(0,0) * m(1,3) * m(2,2) * m(3,1) - m(0,2) * m(1,0) * m(2,3) * m(3,1) + m(0,0) * m(1,2) * m(2,3) * m(3,1) +
+                  m(0,3) * m(1,1) * m(2,0) * m(3,2) - m(0,1) * m(1,3) * m(2,0) * m(3,2) - m(0,3) * m(1,0) * m(2,1) * m(3,2) +
+                  m(0,0) * m(1,3) * m(2,1) * m(3,2) + m(0,1) * m(1,0) * m(2,3) * m(3,2) - m(0,0) * m(1,1) * m(2,3) * m(3,2) -
+                  m(0,2) * m(1,1) * m(2,0) * m(3,3) + m(0,1) * m(1,2) * m(2,0) * m(3,3) + m(0,2) * m(1,0) * m(2,1) * m(3,3) -
+                  m(0,0) * m(1,2) * m(2,1) * m(3,3) - m(0,1) * m(1,0) * m(2,2) * m(3,3) + m(0,0) * m(1,1) * m(2,2) * m(3,3);
+    return d;
+}
 
 Vertex* Polyhedron::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
 
@@ -253,7 +252,7 @@ void Polyhedron::initializeFacets(void) {
             } while (v != first);
             
         // calculate the facet volume and (potentially) randomly sample
-        facetVolume(pln.first, pln.second, vol);
+        calculateFacetVolume(pln.first, pln.second, vol);
         }
     sumJacobians = vol;
     
@@ -643,7 +642,7 @@ double Polyhedron::lnProbabilityForward(std::vector<mpq_class>& W, Vector& pt) {
     randomlySample = false;
     
     // calculate the probability of the randomly proposed point, pt
-    double lnProb = log(sumJacobians.get_den().get_d()) - log(sumJacobians.get_num().get_d());
+    double lnProb = -log(sumJacobians.get_d());
     lnProb += Probability::Helper::lnGamma(alphaT + 3.0) - Probability::Helper::lnGamma(alphaT);
     lnProb += (alphaT - 1.0) * log(alphaC);
     return lnProb;
@@ -654,7 +653,7 @@ double Polyhedron::lnProbabilityReverse(std::vector<mpq_class>& W, Vector& pt) {
     // set up the polyhedron, which will also locate the point
     randomlySample = false;
     pointFoundInPolyhedron = false;
-    randomPoint = pt;                 // random point now represents the point passed in to this function
+    randomPoint = pt;                 // randomPoint now represents the point passed in to this function
     setWeights(W);
     
     // some sanity checks
@@ -664,7 +663,7 @@ double Polyhedron::lnProbabilityReverse(std::vector<mpq_class>& W, Vector& pt) {
         throw(RbException("Polyhedron: Did not find point in polyhedron"));
     
     // calculate the probability of proposing the point, pt, passed in as a parameter
-    double lnProb = log(sumJacobians.get_den().get_d()) - log(sumJacobians.get_num().get_d());
+    double lnProb = -log(sumJacobians.get_d());
     lnProb += Probability::Helper::lnGamma(alphaT + 3.0) - Probability::Helper::lnGamma(alphaT);
     lnProb += (alphaT - 1.0) * log(alphaC);
     return lnProb;

@@ -26,9 +26,7 @@ class Plane {
         mpq_class&      getB(void) { return b; }
         mpq_class&      getC(void) { return c; }
         mpq_class&      getD(void) { return d; }
-        mpf_class       getDistance(Vector& point);
         std::string     getStr(void);
-        void            normal(Vector& n);
         void            set(Vector pt1, Vector pt2, Vector pt3);
     
     private:
