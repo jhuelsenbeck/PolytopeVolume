@@ -448,7 +448,6 @@ double McmcState::updateNonreversibleRates(void) {
     storedQ = Q;
     storedPi = pi;
     
-#   if 1
     std::vector<double> oldRates(12);
     std::vector<double> newRates(12);
     std::vector<double> alphaForward(12);
@@ -498,26 +497,6 @@ double McmcState::updateNonreversibleRates(void) {
     double lnProposalProb = Probability::Dirichlet::lnPdf(alphaReverse, oldRates)-
                             Probability::Dirichlet::lnPdf(alphaForward, newRates);
     return lnProposalProb;
-    
-#   else
-
-    for (int i=0; i<4; i++)
-        {
-        mpq_class sum;
-        for (int j=0; j<4; j++)
-            {
-            if (i != j)
-                {
-                Q(i,j) = exp(rng->uniformRv());
-                sum += Q(i,j);
-                }
-            }
-        Q(i,i) = -sum;
-        }
-    setNonReversibleRateMatrix();
-    return 0.0;
-    
-#   endif
 }
 
 double McmcState::updateToNonReversible(void) {
@@ -540,7 +519,7 @@ double McmcState::updateToNonReversible(void) {
     double lnJacobian = (log(64.0) + log(wCG) + log(wCT) + log(wGT));
     lnJacobian -= log(piC) + 2.0 * log(piG);
 
-    // polyhedron density for reverse move
+    // polyhedron density for forward move
     W[0] = (pi[A] * Q(A,C) + pi[C] * Q(C,A)) / 2;
     W[1] = (pi[A] * Q(A,G) + pi[G] * Q(G,A)) / 2;
     W[2] = (pi[A] * Q(A,T) + pi[T] * Q(T,A)) / 2;
@@ -548,11 +527,9 @@ double McmcState::updateToNonReversible(void) {
     W[4] = (pi[C] * Q(C,T) + pi[T] * Q(T,C)) / 2;
     W[5] = (pi[G] * Q(G,T) + pi[T] * Q(T,G)) / 2;
     Vector randomPoint;
-    //mpf_class v = poly.volume(W, randomPoint);
-    //double lnRv = log(v.get_d());
     double lnRv = -poly.lnProbabilityForward(W, randomPoint);
     
-    // update rates
+    // update rates (off diagonal components)
     mpq_class u1 = randomPoint.getX();
     mpq_class u2 = randomPoint.getY();
     mpq_class u3 = randomPoint.getZ();
@@ -568,6 +545,8 @@ double McmcState::updateToNonReversible(void) {
     Q(G,C) = 2 * (pi[C]/pi[G]) * storedQ(C,G) * (1 - u1);
     Q(T,C) = 2 * (pi[C]/pi[T]) * storedQ(C,T) * (1 - u2);
     Q(T,G) = 2 * (pi[G]/pi[T]) * storedQ(G,T) * (1 - u3);
+    
+    // update the diagonal components of the rate matrix
     for (int i=0; i<4; i++)
         {
         mpq_class sum;
@@ -579,15 +558,20 @@ double McmcState::updateToNonReversible(void) {
         Q(i,i) = -sum;
         }
         
-    calculateStationaryFrequencies();
+    //calculateStationaryFrequencies(); // not necessary because the equations, above, maintain the stationary frequencies
     
+    // the average rate should remain one. This is just a sanity check
     mpq_class averageRate;
     for (int i=0; i<4; i++)
         averageRate += -pi[i] * Q(i,i);
-    mpq_class factor = 1 / averageRate;
-    for (int i=0; i<4; i++)
-        for (int j=0; j<4; j++)
-            Q(i,j) *= factor;
+    if (averageRate != 1)
+        {
+        std::cout << "Warning: the average rate should be one in updateToReversible" << std::endl;
+        mpq_class factor = 1 / averageRate;
+        for (int i=0; i<4; i++)
+            for (int j=0; j<4; j++)
+                Q(i,j) *= factor;
+        }
     
     isTimeReversible = false;
 
@@ -605,7 +589,7 @@ double McmcState::updateToReversible(void) {
     storedQ = Q;
     storedIsTimeReversible = isTimeReversible;
     
-    calculateStationaryFrequencies();
+    //calculateStationaryFrequencies(); // should not be necessary
 
     // average rates with same stationary frequencies
     mpq_class averageRate;
@@ -626,9 +610,13 @@ double McmcState::updateToReversible(void) {
         
     // make certain average rate is one
     mpq_class factor = 1 / averageRate;
-    for (int i=0; i<4; i++)
-        for (int j=0; j<4; j++)
-            Q(i,j) *= factor;
+    if (factor != 1)
+        {
+        std::cout << "Warning: the average rate should be one in updateToReversible" << std::endl;
+        for (int i=0; i<4; i++)
+            for (int j=0; j<4; j++)
+                Q(i,j) *= factor;
+        }
         
     // jacobian
     double piC = pi[C].get_d();
@@ -652,10 +640,10 @@ double McmcState::updateToReversible(void) {
     W[4] = pi[C] * Q(C,T);
     W[5] = pi[G] * Q(G,T);
     
+    // figure out where in the (u1,u2,u3) space the non-reversible model lives
     mpq_class u1 = storedQ(C,G) / (2 * Q(C,G));
     mpq_class u2 = storedQ(C,T) / (2 * Q(C,T));
     mpq_class u3 = storedQ(G,T) / (2 * Q(G,T));
-                   
     Vector pt;
     pt.set(u1, u2, u3);
     double lnRv = poly.lnProbabilityReverse(W, pt);

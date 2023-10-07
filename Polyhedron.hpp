@@ -24,15 +24,15 @@ class MpqMatrix {
         mpq_class           m[16];
 };
 
-// used to pick a random point in the polyhedron
+// used to pick a random point in the polyhedron and the value in the vector_volume_map, below
 struct VectorInfo {
     
     mpq_class               volume;
     double                  alphaC;
 };
 
-// do you really want to type out the entire map declaration or would you rather
-// use a short-hand version?
+// Do you really want to type out the entire map declaration or would you rather
+// use a short-hand version? I thought so.
 typedef std::map<Plane*,std::vector<Vertex*> > plane_vertex_map;
 typedef std::map< std::pair<Plane*,Plane*>, std::vector<Vertex*> > line_vertex_map;
 typedef std::map<Vector*,VectorInfo> vector_volume_map;
@@ -59,7 +59,7 @@ class Polyhedron {
      * represent the unit cube). The other six planes represent the six constraints, above. The
      * planes for the unit cube never change and are initialized on instantiation of a Polyhedron
      * object. The other six planes (from the constraints, above) are initialized each time the
-     * lnProbability function is called. In fact, the lnProbability functions take as a parameter
+     * lnProbability* function is called. In fact, the lnProbability* functions take as a parameter
      * a vector of weights: w_{AC}, w_{AG}, w_{AT}, w_{CG}, w_{CT}, w_{GT}.
      *
      * The constraints form a polyhedron, with the details depending on the weights. The goal
@@ -84,7 +84,7 @@ class Polyhedron {
      * and denominator. Why do I use the GMP class at all? I do it to allow for exact
      * bounds checks and to avoid problems with threshold comparisons (which a normal implementation
      * using doubles would require). I took care to make certain that all of the key calculations
-     * are always with rational numbers, never requiring the use of doubles or even the
+     * are always with rational numbers, never requiring the use of doubles or even 
      * mpf_class (real number representation in the GMP library).
      *
      * Besides calculating the volume of the polyhedron, this class will also generate
@@ -196,9 +196,9 @@ class Polyhedron {
         mpq_class           oneHalfQ;
         mpq_class           twoQ;
 
-        mpq_class           aQ;                       // used in calculateTetrahedronVolume
-        mpq_class           bQ;
-        mpq_class           cQ;
+        mpq_class           aQ;                       // used in calculateTetrahedronVolume and
+        mpq_class           bQ;                       // are the elements of a 3 X 3 matrix for
+        mpq_class           cQ;                       // which the determinant will be calculated
         mpq_class           dQ;
         mpq_class           eQ;
         mpq_class           fQ;
@@ -207,7 +207,7 @@ class Polyhedron {
         mpq_class           iQ;
 
         Vector              center;                   // vectors representing the constraints directly used
-        Vector              xzMinA_Zero_Zero;         //  for initializing the planes for those constraints
+        Vector              xzMinA_Zero_Zero;         // for initializing the planes for those constraints
         Vector              xzMaxA_Zero_Zero;
         Vector              xzMinA_One_Zero;
         Vector              xzMaxA_One_Zero;
@@ -227,7 +227,7 @@ class Polyhedron {
         Vector              one_Zero_yzMinA;
 
         Plane               front;                    // the planes representing the constraints
-        Plane               back;
+        Plane               back;                     // they are persistent until this polyhedron object dies
         Plane               top;
         Plane               bottom;
         Plane               left;
@@ -250,7 +250,7 @@ class Polyhedron {
         double              alphaT;                   // the parameter of the Dirichlet(alphaT,1,1,1) distribution for biasing the random point
         double              alphaC;                   // the barycentric coordinate for the center vertex (for biasing the random point)
         
-        bool                mathematicaPolyhedron;
+        bool                mathematicaPolyhedron;    // a flag for formatting Mathematica output for the polyhedron (pretty!)
         
         mpq_class           sumJacobians;             // the sum of the determinants of the tetrahedra, for volume/probability calculations
 };
