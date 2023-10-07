@@ -6,6 +6,16 @@
 
 class Plane {
 
+    /**
+     * A light-weight class to represent a plane in 3D. Planes are represented in the general
+     * form, with parameters ax + by + cz + d = 0. These plane parameters are GMP rational
+     * numbers.
+     *
+     * @copyright Copyright 2009-
+     * @author The RevBayes Development Core Team (John Huelsenbeck)
+     * @since 2014-11-18, version 1.0
+     */
+
     public:
                         Plane(void);
                         Plane(Vector pt1, Vector pt2, Vector pt3);
@@ -19,7 +29,6 @@ class Plane {
         mpf_class       getDistance(Vector& point);
         std::string     getStr(void);
         void            normal(Vector& n);
-        void            normalize(void);
         void            set(Vector pt1, Vector pt2, Vector pt3);
     
     private:

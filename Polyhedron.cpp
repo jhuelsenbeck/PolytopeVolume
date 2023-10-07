@@ -1,17 +1,13 @@
 #include <iomanip>
 #include <map>
+#include "MpqRateMatrix.hpp"
 #include "Msg.hpp"
 #include "Polyhedron.hpp"
 #include "Probability.hpp"
 #include "RandomVariable.hpp"
-#include "RateMatrix.hpp"
 #include "Vertex.hpp"
 #include "VertexFactory.hpp"
 
-#define A 0
-#define C 1
-#define G 2
-#define T 3
 
 
 void MpqMatrix::print(void) {
@@ -33,6 +29,7 @@ void MpqMatrix::set(int idx, Vector* v) {
 
 Polyhedron::Polyhedron(void) {
     
+    // initialize commonly used constants
     zeroQ     = 0;
     oneQ      = 1;
     oneHalfQ  = 1;
@@ -41,8 +38,9 @@ Polyhedron::Polyhedron(void) {
     
     randomlySample = false;
     mathematicaPolyhedron = false;
-    alphaT = 1.0;
+    alphaT = 1.0; // the default value for the Dirichlet(alphaT,1,1,1) used to randomly draw points from tetrahedra
 
+    // the center vertex is constant, so initialize it here
     center.setX(oneHalfQ);
     center.setY(oneHalfQ);
     center.setZ(oneHalfQ);
@@ -73,10 +71,17 @@ Polyhedron::Polyhedron(void) {
     sumJacobians = 0;
 }
 
-Polyhedron::~Polyhedron(void) {
-
-}
-
+/**
+ * Calculate the volume (up to a constant of 1/6) of a tetrahedron. I know that a tetrahedron is
+ * formed from four vertices, but here we pass in three vectors, which are calculated by subtracting
+ * one of the vertices (in this case the center point) from the other three.
+ *
+ * \param[in]    v1        The first vector
+ * \param[in]    v2        The second vector
+ * \param[in]    v3        The third vector
+ * \param[in]    vol       A reference to the volume of the tetrahedron, passed in as a reference
+ *                         to avoid copying of a mpq_class object
+ */
 void Polyhedron::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, mpq_class& vol) {
 
     aQ = v1->getX() - oneHalfQ;
@@ -91,7 +96,7 @@ void Polyhedron::calculateTetrahedronVolume(Vector* v1, Vector* v2, Vector* v3, 
     
     // volume is 1/6 of the determinant
     vol = (aQ * eQ * iQ) - (aQ * fQ * hQ) - (bQ * dQ * iQ) + (bQ * fQ * gQ) + (cQ * dQ * hQ) - (cQ * eQ * gQ);
-    //vol /= 6; // this will be taken care of in the probability density
+    //vol /= 6;                  // this will be taken care of in the probability density with a Gamma factor that will reduce to 3! = 6 in the
     if (vol < 0)
         vol = -vol;
 }
@@ -103,6 +108,9 @@ void Polyhedron::clearTetrahedraMap(void) {
     tetrahedra.clear();
 }
 
+/**
+ * Hard-wired determinant of a 4 X 4 matrix of GMP rationals.
+ */
 mpq_class Polyhedron::det(MpqMatrix& m) {
 
     mpq_class d = m(0,3) * m(1,2) * m(2,1) * m(3,0) - m(0,2) * m(1,3) * m(2,1) * m(3,0) - m(0,3) * m(1,1) * m(2,2) * m(3,0) +
@@ -116,8 +124,16 @@ mpq_class Polyhedron::det(MpqMatrix& m) {
     return d;
 }
 
+/**
+ * Find the volume of a polyhedron formed by the facet vertices and the center point, (1/2,1/2,1/2).
+ *
+ * \param[in]    pln       The plane for the facet
+ * \param[in]    vertices  The vertices of the facet
+ * \param[in]    vol       A reference to the volume, which will be added to
+ */
 void Polyhedron::facetVolume(Plane* pln, std::vector<Vertex*>& vertices, mpq_class& vol) {
 
+    // loop over triangulations of the facet
     Vector pt;
     Vertex* v1 = vertices[0];
     Vertex* p = v1->getTo();
@@ -208,6 +224,12 @@ Vertex* Polyhedron::findOtherVertex(Vertex* from, Vertex* v, Plane* pln) {
     return nullptr;
 }
 
+/**
+ * Set up all of the facets by ordering the vertices for each. Here, the
+ * volume of each facet (formed by the vertices of the facet and the
+ * vertex at the center of the polyhedron at 1/2, 1/2, 1/2) is calculated
+ * by triangulating each facet into its component tetrahedra.
+ */
 void Polyhedron::initializeFacets(void) {
     
     clearTetrahedraMap();
@@ -258,6 +280,9 @@ void Polyhedron::initializeFacets(void) {
         }
 }
 
+/**
+ * Find all the vertices of the polyhedron.
+ */
 void Polyhedron::initializePlanes(void) {
 
     // make planes that will slice up the cube
@@ -406,6 +431,15 @@ void Polyhedron::insertVertex(Plane* p1, Plane* p2, Vertex* v) {
         }
 }
 
+/**
+ * Test whether three planes intersect and, if so, initialize the intersection point
+ *
+ * \param[in]    plane1       The first plane
+ * \param[in]    plane2       The second plane
+ * \param[in]    plane3       The third plane
+ * \param[in]    intersection The intersecting point of the three planes
+ * \return  A boolean indicating whether or not the planes intersect at a point
+ */
 bool Polyhedron::intersect(Plane& plane1, Plane& plane2, Plane& plane3, Vector& intersection) {
 
     mpq_class& a1 = plane1.getA();
@@ -428,13 +462,6 @@ bool Polyhedron::intersect(Plane& plane1, Plane& plane2, Plane& plane3, Vector& 
     mpq_class detAy = -d1 * (c2 * a3 - a2 * c3) - d2 * (c3 * a1 - a3 * c1) - d3 * (c1 * a2 - a1 * c2);
     mpq_class detAz = -d1 * (a2 * b3 - b2 * a3) - d2 * (a3 * b1 - b3 * a1) - d3 * (a1 * b2 - b1 * a2);
     
-#   if 0
-    std::cout << "detA  = " << detA << std::endl;
-    std::cout << "detAx = " << detAx << std::endl;
-    std::cout << "detAy = " << detAy << std::endl;
-    std::cout << "detAz = " << detAz << std::endl;
-#   endif
-    
     mpq_class x = detAx / detA;
     mpq_class y = detAy / detA;
     mpq_class z = detAz / detA;
@@ -446,10 +473,36 @@ bool Polyhedron::intersect(Plane& plane1, Plane& plane2, Plane& plane3, Vector& 
     return true;
 }
 
-
+/**
+ * Test whether a point is in a tetrahedron and, if so, initialize its barycentric coordinates.
+ *
+ * \param[in]    pt       The point to be tested.
+ * \param[in]    center   The first vertex (which also is the center vertex of the polyhedron)
+ * \param[in]    v1       The first vertex on the facet
+ * \param[in]    v2       The second vertex on the facet
+ * \param[in]    v3       The third vertex on the facet
+ * \param[in]    b1       A reference to the first barycentric coordinate, which might be initialized
+ * \param[in]    b2       A reference to the second barycentric coordinate, which might be initialized
+ * \param[in]    b3       A reference to the third barycentric coordinate, which might be initialized
+ * \param[in]    b4       A reference to the fourth barycentric coordinate, which might be initialized
+ * \return  A boolean indicating whether or not the point is in the tetrahedron
+ */
 bool Polyhedron::isInTetrahedron(Vector* pt, Vector* center, Vector* v1, Vector* v2, Vector* v3, mpq_class& b1, mpq_class& b2, mpq_class& b3, mpq_class& b4) {
 
-/*       |x1 y1 z1 1|
+    /* Let the tetrahedron have vertices
+
+        V1 = (x1, y1, z1)
+        V2 = (x2, y2, z2)
+        V3 = (x3, y3, z3)
+        V4 = (x4, y4, z4)
+
+      and your test point be
+
+        P = (x, y, z).
+
+      Then the point P is in the tetrahedron if following five determinants all have the same sign.
+
+         |x1 y1 z1 1|
     D0 = |x2 y2 z2 1|
          |x3 y3 z3 1|
          |x4 y4 z4 1|
@@ -472,7 +525,11 @@ bool Polyhedron::isInTetrahedron(Vector* pt, Vector* center, Vector* v1, Vector*
          |x1 y1 z1 1|
     D4 = |x2 y2 z2 1|
          |x3 y3 z3 1|
-         |x  y  z  1| */
+         |x  y  z  1|
+         
+    If the point is in the tetrahedron, the determinants, above, can be used to determine the
+    barycentric coordinates of the point as bi = Di / D0, where bi is the i-th barycentric
+    coordinate. */
          
     MpqMatrix m;
     
@@ -487,8 +544,6 @@ bool Polyhedron::isInTetrahedron(Vector* pt, Vector* center, Vector* v1, Vector*
     bool positiveD0 = false;
     if (d0 > 0)
         positiveD0 = true;
-    //m.print();
-    //std::cout << "d0 = " << d0.get_d() << std::endl;
     
     // d1
     m.set(0, pt);
@@ -496,8 +551,6 @@ bool Polyhedron::isInTetrahedron(Vector* pt, Vector* center, Vector* v1, Vector*
     bool positiveDi = false;
     if (d1 > 0)
         positiveDi = true;
-    //m.print();
-    //std::cout << "d1 = " << d1.get_d() << std::endl;
     if (positiveD0 != positiveDi)
         return false;
 
@@ -508,8 +561,6 @@ bool Polyhedron::isInTetrahedron(Vector* pt, Vector* center, Vector* v1, Vector*
     positiveDi = false;
     if (d2 > 0)
         positiveDi = true;
-    //m.print();
-    //std::cout << "d2 = " << d2.get_d() << std::endl;
     if (positiveD0 != positiveDi)
         return false;
 
@@ -520,8 +571,6 @@ bool Polyhedron::isInTetrahedron(Vector* pt, Vector* center, Vector* v1, Vector*
     positiveDi = false;
     if (d3 > 0)
         positiveDi = true;
-    //m.print();
-    //std::cout << "d3 = " << d3.get_d() << std::endl;
     if (positiveD0 != positiveDi)
         return false;
 
@@ -532,12 +581,10 @@ bool Polyhedron::isInTetrahedron(Vector* pt, Vector* center, Vector* v1, Vector*
     positiveDi = false;
     if (d4 > 0)
         positiveDi = true;
-    //m.print();
-    //std::cout << "d4 = " << d4.get_d() << std::endl;
     if (positiveD0 != positiveDi)
         return false;
 
-    // pt is in the tetrahedron! We can now calculate
+    // We made it! The point, pt, is in the tetrahedron! We can now calculate
     // its barycentric coordinates
     b1 = d1 / d0;
     b2 = d2 / d0;
@@ -589,14 +636,17 @@ bool Polyhedron::isValid(Vector& pt) {
 
 double Polyhedron::lnProbabilityForward(std::vector<mpq_class>& W, Vector& pt) {
 
+    // set up the polyhedron, which will also randomly sample and initialize pt
     randomlySample = true;
     setWeights(W);
     
+    // initialize pt to the randomly selected point and do a sanity check
     pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
     if (isValid(pt) == false)
         Msg::error("Random point is not in polyhedron");
     randomlySample = false;
     
+    // calculate the probability of the randomly proposed point, pt
     double lnProb = log(sumJacobians.get_den().get_d()) - log(sumJacobians.get_num().get_d());
     lnProb += Probability::Helper::lnGamma(alphaT + 3.0) - Probability::Helper::lnGamma(alphaT);
     lnProb += (alphaT - 1.0) * log(alphaC);
@@ -605,16 +655,19 @@ double Polyhedron::lnProbabilityForward(std::vector<mpq_class>& W, Vector& pt) {
 
 double Polyhedron::lnProbabilityReverse(std::vector<mpq_class>& W, Vector& pt) {
 
+    // set up the polyhedron, which will also locate the point
     randomlySample = false;
     pointFoundInPolyhedron = false;
-    randomPoint = pt;
+    randomPoint = pt;                 // random point now represents the point passed in to this function
     setWeights(W);
     
+    // some sanity checks
     if (isValid(pt) == false)
         Msg::error("Point representing reverse move not in polyhedron");
     if (pointFoundInPolyhedron == false)
         Msg::error("Didn't find point in polyhedron");
     
+    // calculate the probability of proposing the point, pt, passed in as a parameter
     double lnProb = log(sumJacobians.get_den().get_d()) - log(sumJacobians.get_num().get_d());
     lnProb += Probability::Helper::lnGamma(alphaT + 3.0) - Probability::Helper::lnGamma(alphaT);
     lnProb += (alphaT - 1.0) * log(alphaC);
@@ -671,29 +724,19 @@ std::string Polyhedron::mathematicaPolyhedronOutput(void) {
     return str;
 }
 
-double Polyhedron::monteCarloVolume(int numberReplicates) {
+double Polyhedron::monteCarloVolume(RandomVariable* rng, int numberReplicates) {
 
-    RandomVariable& rng = RandomVariable::randomVariableInstance();
-    int numberInPolytope = 0;
+    int numberInPolyhedron = 0;
     for (int i=0; i<numberReplicates; i++)
         {
-        double u1 = rng.uniformRv();
-        double u2 = rng.uniformRv();
-        double u3 = rng.uniformRv();
+        double u1 = rng->uniformRv();
+        double u2 = rng->uniformRv();
+        double u3 = rng->uniformRv();
         Vector pt(u1, u2, u3);
-        bool validVertex = isValid(pt);
-        if (validVertex == true)
-            numberInPolytope++;
+        if (isValid(pt) == true)
+            numberInPolyhedron++;
         }
-    return (double)numberInPolytope / numberReplicates;
-}
-
-void Polyhedron::pointFromNonreversibleWeights(RateMatrix& Q, std::vector<mpq_class> pi, Vector& pt) {
-
-    mpq_class u1 = pi[C] * Q(C,G) / ( pi[C] * Q(C,G) + pi[G] * Q(G,C) );
-    mpq_class u2 = pi[C] * Q(C,T) / ( 2 * pi[C] * Q(C,T) + pi[C] * Q(C,A) + pi[C] * Q(C,G) - pi[A] * Q(A,C) - pi[G] * Q(G,C) );
-    mpq_class u3 = ( 1 - 2 * pi[A] * Q(A,T) - 2 * pi[C] * Q(C,T) - pi[A] * Q(A,C) - pi[A] * Q(A,G) - pi[C] * Q(C,A) - pi[C] * Q(C,G) - pi[G] * Q(G,A) - pi[G] * Q(G,C) ) / (2 * ( 1 - 2 * pi[A] * Q(A,T) - 2 * pi[C] * Q(C,T) - pi[A] * Q(A,C) - 2 * pi[A] * Q(A,G) - pi[C] * Q(C,A) - 2 * pi[C] * Q(C,G) ) );
-    pt.set(u1, u2, u3);
+    return (double)numberInPolyhedron / numberReplicates;
 }
 
 void Polyhedron::print(std::vector<mpq_class>& W) {
@@ -703,10 +746,10 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
     setWeights(W);
     mpq_class vol = sumJacobians / 6;
     std::cout << "Volume(Exact) = " << vol << " (" << vol.get_d() << ")" << std::endl;
-    std::cout << "Volume(MC)    = " << monteCarloVolume(100000) << std::endl;
+    std::cout << "Volume(MC)    = " << monteCarloVolume(&RandomVariable::randomVariableInstance(), 100000) << std::endl;
     mathematicaPolyhedron = false;
     
-    int numPoints = 0;
+    int numPoints = 1000;
     Vector pt;
     randomlySample = true;
     

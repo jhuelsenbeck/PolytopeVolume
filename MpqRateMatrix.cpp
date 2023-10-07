@@ -1,14 +1,14 @@
-#include "RateMatrix.hpp"
+#include "MpqRateMatrix.hpp"
 
 
 
-RateMatrix::RateMatrix(void) {
+MpqRateMatrix::MpqRateMatrix(void) {
 
     q = new mpq_class[16];
     endBuffer = q + 16;
 }
 
-RateMatrix::RateMatrix(const RateMatrix& m) {
+MpqRateMatrix::MpqRateMatrix(const MpqRateMatrix& m) {
     
     q = new mpq_class[16];
     endBuffer = q + 16;
@@ -21,12 +21,12 @@ RateMatrix::RateMatrix(const RateMatrix& m) {
         }
 }
 
-RateMatrix::~RateMatrix(void) {
+MpqRateMatrix::~MpqRateMatrix(void) {
 
     delete [] q;
 }
 
-RateMatrix& RateMatrix::operator=(const RateMatrix& rhs) {
+MpqRateMatrix& MpqRateMatrix::operator=(const MpqRateMatrix& rhs) {
 
     if (this != &rhs)
         {
@@ -40,15 +40,15 @@ RateMatrix& RateMatrix::operator=(const RateMatrix& rhs) {
     return *this;
 }
 
-void RateMatrix::calculateStationaryFrequencies(std::vector<mpq_class>& f) {
+void MpqRateMatrix::calculateStationaryFrequencies(std::vector<mpq_class>& f) {
 
 	// transpose the rate matrix (qMatrix) and put into QT
-	RateMatrix QT;
+	MpqRateMatrix QT;
 	transposeMatrix(*this, QT);
 
 	// compute the LU decomposition of the transposed rate matrix
-	RateMatrix L;
-	RateMatrix U;
+	MpqRateMatrix L;
+	MpqRateMatrix U;
 	computeLandU(QT, L, U);
 	
 	// back substitute into z = 0 to find un-normalized stationary frequencies
@@ -70,7 +70,7 @@ void RateMatrix::calculateStationaryFrequencies(std::vector<mpq_class>& f) {
 		f[i] /= sum;
 }
 
-void RateMatrix::computeLandU(RateMatrix& aMat, RateMatrix& lMat, RateMatrix& uMat) {
+void MpqRateMatrix::computeLandU(MpqRateMatrix& aMat, MpqRateMatrix& lMat, MpqRateMatrix& uMat) {
 
 	for (int j=0; j<4; j++)
 		{
@@ -104,7 +104,7 @@ void RateMatrix::computeLandU(RateMatrix& aMat, RateMatrix& lMat, RateMatrix& uM
 		}
 }
 
-void RateMatrix::transposeMatrix(const RateMatrix& a, RateMatrix& t) {
+void MpqRateMatrix::transposeMatrix(const MpqRateMatrix& a, MpqRateMatrix& t) {
 	
 	for (int i=0; i<4; i++)
 		for (int j=0; j<4; j++)

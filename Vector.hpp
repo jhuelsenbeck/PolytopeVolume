@@ -6,6 +6,15 @@
 
 class Vector {
 
+    /**
+     * A light-weight class to represent a vector in 3D, with coordinates x, y, z. The
+     * coordinates are GMP rational numbers.
+     *
+     * @copyright Copyright 2009-
+     * @author The RevBayes Development Core Team (John Huelsenbeck)
+     * @since 2014-11-18, version 1.0
+     */
+
     public:
                         Vector(void);
                         Vector(const Vector& v);

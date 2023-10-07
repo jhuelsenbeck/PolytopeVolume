@@ -1,5 +1,5 @@
-#ifndef RateMatrix_hpp
-#define RateMatrix_hpp
+#ifndef MpqRateMatrix_hpp
+#define MpqRateMatrix_hpp
 
 #include <gmpxx.h>
 #include <iomanip>
@@ -8,15 +8,15 @@
 
 
 
-class RateMatrix {
+class MpqRateMatrix {
 
     public:
-                            RateMatrix(void);
-                            RateMatrix(const RateMatrix& m);
-                           ~RateMatrix(void);
+                            MpqRateMatrix(void);
+                            MpqRateMatrix(const MpqRateMatrix& m);
+                           ~MpqRateMatrix(void);
         mpq_class&          operator()(size_t r, size_t c) { return this->q[r * 4 + c]; }
         const mpq_class&    operator()(size_t r, size_t c) const { return this->q[r * 4 + c]; }
-        RateMatrix&         operator=(const RateMatrix& rhs);
+        MpqRateMatrix&      operator=(const MpqRateMatrix& rhs);
         mpq_class*          begin(void) { return q; }
         mpq_class*          begin(void) const { return q; }
         void                calculateStationaryFrequencies(std::vector<mpq_class>& f);
@@ -24,15 +24,15 @@ class RateMatrix {
         mpq_class*          end(void) const { return endBuffer; }
     
     private:
-        void                computeLandU(RateMatrix& aMat, RateMatrix& lMat, RateMatrix& uMat);
-        void                transposeMatrix(const RateMatrix& a, RateMatrix& t);
+        void                computeLandU(MpqRateMatrix& aMat, MpqRateMatrix& lMat, MpqRateMatrix& uMat);
+        void                transposeMatrix(const MpqRateMatrix& a, MpqRateMatrix& t);
         mpq_class*          q;
         mpq_class*          endBuffer;
 
-    friend std::ostream& operator<<(std::ostream& os, RateMatrix& m);
+    friend std::ostream& operator<<(std::ostream& os, MpqRateMatrix& m);
 };
 
-inline std::ostream& operator<<(std::ostream& os, RateMatrix& m) {
+inline std::ostream& operator<<(std::ostream& os, MpqRateMatrix& m) {
 
     std::vector<mpq_class> bf(4);
     m.calculateStationaryFrequencies(bf);

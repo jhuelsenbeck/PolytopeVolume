@@ -3,8 +3,8 @@
 
 #include <gmpxx.h>
 #include <string>
+#include "MpqRateMatrix.hpp"
 #include "Polyhedron.hpp"
-#include "RateMatrix.hpp"
 class RandomVariable;
 
 enum UpdateType { ToNR, ToR, Pi, ExchR, NRrates };
@@ -41,11 +41,11 @@ class McmcState {
         RandomVariable*         rng;
         std::vector<mpq_class>  W;
         bool                    isTimeReversible;
-        RateMatrix              Q;
+        MpqRateMatrix           Q;
         std::vector<mpq_class>  pi;
         std::vector<mpq_class>  r;
         bool                    storedIsTimeReversible;
-        RateMatrix              storedQ;
+        MpqRateMatrix           storedQ;
         std::vector<mpq_class>  storedPi;
         std::vector<mpq_class>  storedR;
         UpdateType              updateType;

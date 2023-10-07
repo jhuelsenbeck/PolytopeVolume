@@ -7,6 +7,16 @@
 
 class VertexFactory {
 
+    /**
+     * A singleton class to manage vertices which are used in constructing
+     * polyhedra. This class hands out and retrieves instances of the
+     * Vertex class.
+     *
+     * @copyright Copyright 2009-
+     * @author The RevBayes Development Core Team (John Huelsenbeck)
+     * @since 2014-11-18, version 1.0
+     */
+
     public:
         static VertexFactory&   vertexFactoryInstance(void)
                                     {

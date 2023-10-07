@@ -119,10 +119,6 @@ void Plane::normal(Vector& n) {
     n.z = c;
 }
 
-void Plane::normalize(void) {
-
-}
-
 void Plane::set(Vector pt1, Vector pt2, Vector pt3) {
 
     mpq_class& x1 = pt1.getX();
