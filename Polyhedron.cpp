@@ -653,8 +653,8 @@ double Polyhedron::lnProbabilityReverse(std::vector<mpq_class>& W, Vector& pt) {
     // set up the polyhedron, which will also locate the point
     randomlySample = false;
     pointFoundInPolyhedron = false;
-    randomPoint = pt;                 // randomPoint now represents the point passed in to this function
-    setWeights(W);
+    randomPoint = pt;                 // randomPoint now represents the point passed in to this function and
+    setWeights(W);                    // must be set before setWeights() is called
     
     // some sanity checks
     if (isValid(pt) == false)
@@ -756,18 +756,6 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
         mpq_class& x = randomPoint.getX();
         mpq_class& y = randomPoint.getY();
         mpq_class& z = randomPoint.getZ();
-        
-        x -= oneHalfQ;
-        y -= oneHalfQ;
-        z -= oneHalfQ;
-        mpq_class factor = 1.0;
-        //mpq_class factor = Probability::Beta(1.0,1.0);
-        x *= factor;
-        y *= factor;
-        z *= factor;
-        x += oneHalfQ;
-        y += oneHalfQ;
-        z += oneHalfQ;
         pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
         if (isValid(pt) == false)
             throw(RbException("Polyhedron: Random point is not in polyhedron"));
@@ -797,12 +785,13 @@ void Polyhedron::sampleTetrahedron(Plane* pln, Vector* center, Vector* v1, Vecto
     mpq_class x = center->getX() * a + v1->getX() * s + v2->getX() * t + v3->getX() * u;
     mpq_class y = center->getY() * a + v1->getY() * s + v2->getY() * t + v3->getY() * u;
     mpq_class z = center->getZ() * a + v1->getZ() * s + v2->getZ() * t + v3->getZ() * u;
-    pt.set(x, y, z); // Vector pt = v0*a + v1*s + v2*t + v3*u;
+    pt.set(x, y, z); // pt = vC*a + v1*s + v2*t + v3*u;
 }
 
 void Polyhedron::setWeights(std::vector<mpq_class>& W) {
 
-    // extract symbols from W
+    // assign instance variables representing the
+    // parameter of the polyhedron from W
     this->wAC = W[0];
     this->wAG = W[1];
     this->wAT = W[2];
@@ -810,6 +799,6 @@ void Polyhedron::setWeights(std::vector<mpq_class>& W) {
     this->wCT = W[4];
     this->wGT = W[5];
     
-    // construct polyhedron
+    // construct the polyhedron
     initializePlanes();
 }

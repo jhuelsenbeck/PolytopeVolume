@@ -15,7 +15,7 @@ std::vector<mpq_class> initializeRateMatrix(void);
 int main(int argc, const char* argv[]) {
 
     // interface, such as it is
-    int numCycles = 100000;
+    int numCycles = 10000000;
 
     McmcState state;
     state.setAlphaT(1.0);
