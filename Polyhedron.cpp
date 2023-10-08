@@ -258,7 +258,7 @@ void Polyhedron::initializeFacets(void) {
     
     if (randomlySample == true)
         {
-        mpq_class u = RandomVariable::randomVariableInstance().uniformRv();
+        mpq_class u = RandomVariable::getInstance().uniformRv();
         u *= sumJacobians;
         mpq_class sumVol;
         for (auto tet : tetrahedra)
@@ -741,7 +741,7 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
     setWeights(W);
     mpq_class vol = sumJacobians / 6;
     std::cout << "Volume(Exact) = " << vol << " (" << vol.get_d() << ")" << std::endl;
-    std::cout << "Volume(MC)    = " << monteCarloVolume(&RandomVariable::randomVariableInstance(), 100000) << std::endl;
+    std::cout << "Volume(MC)    = " << monteCarloVolume(&RandomVariable::getInstance(), 100000) << std::endl;
     mathematicaPolyhedron = false;
     
     int numPoints = 1000;
@@ -753,9 +753,6 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
     for (int i=0; i<numPoints; i++)
         {
         setWeights(W);
-        mpq_class& x = randomPoint.getX();
-        mpq_class& y = randomPoint.getY();
-        mpq_class& z = randomPoint.getZ();
         pt.set(randomPoint.getX(), randomPoint.getY(), randomPoint.getZ());
         if (isValid(pt) == false)
             throw(RbException("Polyhedron: Random point is not in polyhedron"));
@@ -771,7 +768,7 @@ void Polyhedron::print(std::vector<mpq_class>& W) {
 
 void Polyhedron::sampleTetrahedron(Plane* pln, Vector* center, Vector* v1, Vector* v2, Vector* v3, Vector& pt, VectorInfo& info) {
     
-    RandomVariable& rng = RandomVariable::randomVariableInstance();
+    RandomVariable& rng = RandomVariable::getInstance();
     
     std::vector<double> alpha(4, 1.0);
     alpha[0] = alphaT;

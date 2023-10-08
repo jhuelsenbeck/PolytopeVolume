@@ -18,7 +18,7 @@
 
 McmcState::McmcState(void) {
     
-    rng = &RandomVariable::randomVariableInstance();
+    rng = &RandomVariable::getInstance();
     r.resize(6);
     storedR.resize(6);
     pi.resize(4);
@@ -72,78 +72,11 @@ void McmcState::initializeTimeReversibleRateMatrix(void) {
     mpq_class one = 1;
 
     // randomly initialize parameters of the GTR model
-    
-    // first, choose the stationary frequency
-    std::vector<double> alpha4(4, 1.0);
-    std::vector<double> bf(4);
-    Probability::Dirichlet::rv(rng, alpha4, bf);
-    for (int i=0; i<4; i++)
-        {
-        if (bf[i] < MIN_FREQ)
-            bf[i] = MIN_FREQ;
-        }
-    double sumD = 0.0;
-    for (int i=0; i<4; i++)
-        sumD += bf[i];
-    for (int i=0; i<4; i++)
-        bf[i] /= sumD;
-    pi[0] = bf[0];
-    pi[1] = bf[1];
-    pi[2] = bf[2];
-    mpq_class s = pi[0] + pi[1] + pi[2];
-    pi[3] = one - s;
-    for (int i=0; i<4; i++)
-        std::cout << "pi[" << i << "] = " << pi[i] << std::endl;
-    
-    // also, choose the exchangability rates
-    std::vector<double> alpha6(6, 1.0);
-    std::vector<double> er(6);
-    Probability::Dirichlet::rv(rng, alpha6, er);
-    for (int i=0; i<6; i++)
-        {
-        if (er[i] < MIN_FREQ)
-            er[i] = MIN_FREQ;
-        }
-    sumD = 0.0;
-    for (int i=0; i<6; i++)
-        sumD += er[i];
-    for (int i=0; i<6; i++)
-        er[i] /= sumD;
-    r[0] = er[0];
-    r[1] = er[1];
-    r[2] = er[2];
-    r[3] = er[3];
-    r[4] = er[4];
-    s = r[0] + r[1] + r[2] + r[3] + r[4];
-    r[5] = one - s;
-
-    // set the rate matrix
-    for (int i=0, k=0; i<4; i++)
-        {
-        for (int j=i+1; j<4; j++)
-            {
-            Q(i,j) = r[k] * pi[j];
-            Q(j,i) = r[k] * pi[i];
-            k++;
-            }
-        }
-    mpq_class averageRate = 0;
-    for (int i=0; i<4; i++)
-        {
-        mpq_class sum = 0;
-        for (int j=0; j<4; j++)
-            {
-            if (i != j)
-                sum += Q(i,j);
-            }
-        Q(i,i) = -sum;
-        averageRate += pi[i] * sum;
-        }
-    mpq_class factor = 1 / averageRate;
-    for (int i=0; i<4; i++)
-        for (int j=0; j<4; j++)
-            Q(i,j) *= factor;
-            
+    Q.initializeTimeReversibleModel(rng);
+    this->pi = Q.getPi();
+    this->r  = Q.getExchangeabilityRates();
+    Q.print();
+                
     // calculate the weights
     std::vector<mpq_class> w(6);
     for (int i=0, k=0; i<4; i++)
@@ -161,7 +94,7 @@ void McmcState::initializeTimeReversibleRateMatrix(void) {
     W[2] = w[2];
     W[3] = w[3];
     W[4] = w[4];
-    s = W[0] + W[1] + W[2] + W[3] + W[4];
+    mpq_class s = W[0] + W[1] + W[2] + W[3] + W[4];
     W[5] = oneHalf - s;
     
     storedIsTimeReversible = isTimeReversible;
@@ -171,7 +104,6 @@ void McmcState::initializeTimeReversibleRateMatrix(void) {
         storedR[i] = r[i];
     storedQ = Q;
         
-
 #   if 1
     std::cout << "W[AC] = " << W[0] << " " << W[0].get_d() << " " << w[0] << std::endl;
     std::cout << "W[AG] = " << W[1] << " " << W[1].get_d() << " " << w[1] << std::endl;
@@ -411,6 +343,7 @@ double McmcState::updateExchangabilityRates(void) {
 void McmcState::updateForAcceptance(void) {
 
     storedIsTimeReversible = isTimeReversible;
+    storedQ = Q;
 }
 
 void McmcState::updateForRejection(void) {
@@ -429,12 +362,7 @@ void McmcState::updateForRejection(void) {
             r[i] = storedR[i];
         }
         
-    mpq_class* p1 = storedQ.begin();
-    for (mpq_class* p2=Q.begin(); p2 != Q.end(); p2++)
-        {
-        *p2 = *p1;
-        p1++;
-        }
+    Q = storedQ;
 }
 
 double McmcState::updateNonreversibleRates(void) {
@@ -594,6 +522,11 @@ double McmcState::updateToReversible(void) {
     //calculateStationaryFrequencies(); // should not be necessary
 
     // average rates with same stationary frequencies
+#   if 0
+    std::cout << isTimeReversible << std::endl;
+    std::cout << Q.getIsReversible() << std::endl;
+    Q.reversibilize();
+#   else
     mpq_class averageRate;
     mpq_class sum;
     for (int i=0; i<4; i++)
@@ -620,7 +553,8 @@ double McmcState::updateToReversible(void) {
             for (int j=0; j<4; j++)
                 Q(i,j) *= factor;
         }
-        
+#   endif
+
     // jacobian
     double piC = pi[C].get_d();
     double piG = pi[G].get_d();

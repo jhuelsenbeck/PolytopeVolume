@@ -73,7 +73,7 @@ std::vector<mpq_class> initializeRateMatrix(void) {
     std::vector<double> r(6);
     std::vector<double> alpha4(4, 1.0);
     std::vector<double> alpha6(6, 1.0);
-    RandomVariable& rng = RandomVariable::randomVariableInstance();
+    RandomVariable& rng = RandomVariable::getInstance();
     Probability::Dirichlet::rv(&rng, alpha4, f);
     Probability::Dirichlet::rv(&rng, alpha6, r);
     
