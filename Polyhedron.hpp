@@ -24,7 +24,7 @@ class MpqMatrix {
         mpq_class           m[16];
 };
 
-// used to pick a random point in the polyhedron and the value in the vector_volume_map, below
+// used to pick a random point in the polyhedron and the value in the vector_volume_map
 struct VectorInfo {
     
     mpq_class               volume;

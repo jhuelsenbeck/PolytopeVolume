@@ -11,6 +11,17 @@ class RandomVariable;
 
 class MpqRateMatrix {
 
+    /**
+     * This class is used to hold a 4 X 4 rate matrix for a continuous-time Markov model. The
+     * implementation of this class relies on GMP rationals to hold rates and to calculate
+     * stationary frequencies or exchangeability parameters. This class also has functionality
+     * to propose a reversible model from a non-reversible one and also to do the reverse.
+     *
+     * @copyright Copyright 2009-
+     * @author The RevBayes Development Core Team (John Huelsenbeck)
+     * @since 2014-11-18, version 1.0
+     */
+
     public:
                                 MpqRateMatrix(void);
                                 MpqRateMatrix(const MpqRateMatrix& m);
@@ -31,11 +42,11 @@ class MpqRateMatrix {
     private:
         void                    computeLandU(MpqRateMatrix& aMat, MpqRateMatrix& lMat, MpqRateMatrix& uMat);
         void                    transposeMatrix(const MpqRateMatrix& a, MpqRateMatrix& t);
-        mpq_class*              q;
-        mpq_class*              endBuffer;
-        bool                    isReversible;
-        std::vector<mpq_class>  pi;
-        std::vector<mpq_class>  r;
+        mpq_class*              q;                     // elements of the rate matrix
+        mpq_class*              endBuffer;             // memory one past the end of the rate matrix array
+        bool                    isReversible;          // flag indicating whether or not this rate matrix is time reversible
+        std::vector<mpq_class>  pi;                    // the stationary frequencies of the rate matrix
+        std::vector<mpq_class>  r;                     // the exchangeability parameters, if time reversible
 
     friend std::ostream& operator<<(std::ostream& os, MpqRateMatrix& m);
 };

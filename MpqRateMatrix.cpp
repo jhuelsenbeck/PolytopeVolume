@@ -204,11 +204,8 @@ void MpqRateMatrix::nonreversibilize(mpq_class& u1, mpq_class& u2, mpq_class& u3
         
     // we weren't nonreversible before, but we are now (or will be in a microsecond)
     isReversible = false;
-
-#   define A 0
-#   define C 1
-#   define G 2
-#   define T 3
+    
+    enum States {A,C,G,T};
 
     // update rates (off diagonal components)
     mpq_class qAC = (*this)(A,C) + (pi[C]/pi[A]) * (*this)(C,G) * (2 * u1 - 1) + (pi[C]/pi[A]) * (*this)(C,T) * (2 * u2 - 1);
@@ -294,12 +291,9 @@ void MpqRateMatrix::reversibilize(void) {
         {
         for (int j=i+1; j<4; j++)
             {
-            if (i != j)
-                {
-                w = this->pi[i] * (*this)(i,j) + this->pi[j] * (*this)(j,i);
-                (*this)(i,j) = w / (2 * this->pi[i]);
-                (*this)(j,i) = w / (2 * this->pi[j]);
-                }
+            w = this->pi[i] * (*this)(i,j) + this->pi[j] * (*this)(j,i);
+            (*this)(i,j) = w / (2 * this->pi[i]);
+            (*this)(j,i) = w / (2 * this->pi[j]);
             }
         }
         
