@@ -29,7 +29,11 @@ class MpqRateMatrix {
         mpq_class&              operator()(size_t r, size_t c) { return this->q[r * 4 + c]; }
         const mpq_class&        operator()(size_t r, size_t c) const { return this->q[r * 4 + c]; }
         MpqRateMatrix&          operator=(const MpqRateMatrix& rhs);
+        void                    adjust(void);
+        void                    calculateAverageRate(mpq_class& ave);
         void                    calculateStationaryFrequencies(std::vector<mpq_class>& f);
+        void                    calculateWeights(std::vector<mpq_class>& wts);
+        bool                    check(void);
         std::vector<mpq_class>& getExchangeabilityRates(void) { return r; }
         bool                    getIsReversible(void) { return isReversible; }
         std::vector<mpq_class>& getPi(void) { return pi; }
@@ -38,6 +42,11 @@ class MpqRateMatrix {
         void                    print(void);
         void                    reversibilize(void);
         void                    setExchangeabilityRates(void);
+        void                    setIsReversible(bool tf) { isReversible = tf; }
+        void                    setPi(std::vector<mpq_class>& f);
+        double                  updateNonReversibleRates(RandomVariable* rng, double alpha0);
+        double                  updateExchangeabilityRates(RandomVariable* rng, double alpha0);
+        double                  updateStationaryFrequencies(RandomVariable* rng, double alpha0);
     
     private:
         void                    computeLandU(MpqRateMatrix& aMat, MpqRateMatrix& lMat, MpqRateMatrix& uMat);

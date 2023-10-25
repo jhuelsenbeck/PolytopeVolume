@@ -16,7 +16,8 @@ class McmcState {
                                 McmcState(void);
         std::vector<mpq_class>& getWeights(void) { return W; }
         bool                    accept(double lnP);
-        bool                    getIsTimeReversible(void) { return isTimeReversible; }
+        void                    adjust(void);
+        bool                    getIsTimeReversible(void);
         double                  lnPriorProbability(void);
         void                    setAlphaT(double x);
         std::string             stateString(void);
@@ -25,12 +26,8 @@ class McmcState {
         void                    updateForRejection(void);
     
     private:
-        void                    calculateStationaryFrequencies(void);
         bool                    checkRateMatrix(void);
-        void                    initializeTimeReversibleRateMatrix(void);
         void                    normalize(std::vector<mpq_class>& vec);
-        void                    setReversibleRateMatrix(void);
-        void                    setNonReversibleRateMatrix(void);
         double                  updateExchangabilityRates(void);
         double                  updateNonreversibleRates(void);
         double                  updateStationaryFrequencies(void);
@@ -39,15 +36,9 @@ class McmcState {
         Polyhedron              poly;
         std::vector<double>     stationaryFrequenciesAlpha;
         RandomVariable*         rng;
-        std::vector<mpq_class>  W;
-        bool                    isTimeReversible;
         MpqRateMatrix           Q;
-        std::vector<mpq_class>  pi;
-        std::vector<mpq_class>  r;
-        bool                    storedIsTimeReversible;
         MpqRateMatrix           storedQ;
-        std::vector<mpq_class>  storedPi;
-        std::vector<mpq_class>  storedR;
+        std::vector<mpq_class>  W;
         UpdateType              updateType;
 };
 

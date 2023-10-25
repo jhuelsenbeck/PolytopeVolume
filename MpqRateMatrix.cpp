@@ -61,6 +61,88 @@ MpqRateMatrix& MpqRateMatrix::operator=(const MpqRateMatrix& rhs) {
     return *this;
 }
 
+void MpqRateMatrix::adjust(void) {
+
+    if (isReversible == true)
+        {
+        std::vector<double> adjR(6);
+        for (int i=0; i<6; i++)
+            adjR[i] = r[i].get_d();
+        for (int i=0; i<5; i++)
+            r[i] = adjR[i];
+        r[5] = 1 - (r[0] + r[1] + r[2] + r[3] + r[4]);
+        std::vector<double> adjPi(4);
+        for (int i=0; i<4; i++)
+            adjPi[i] = pi[i].get_d();
+        for (int i=0; i<3; i++)
+            pi[i] = adjPi[i];
+        pi[3] = 1 - (pi[0] + pi[1] + pi[2]);
+            
+        for (int i=0, k=0; i<4; i++)
+            {
+            for (int j=i+1; j<4; j++)
+                {
+                (*this)(i,j) = r[k] * pi[j];
+                (*this)(j,i) = r[k] * pi[i];
+                k++;
+                }
+            }
+        mpq_class averageRate;
+        for (int i=0; i<4; i++)
+            {
+            mpq_class sum;
+            for (int j=0; j<4; j++)
+                {
+                if (i != j)
+                    sum += (*this)(i,j);
+                }
+            (*this)(i,i) = -sum;
+            averageRate += pi[i] * sum;
+            }
+        mpq_class factor = 1 / averageRate;
+        for (int i=0; i<4; i++)
+            for (int j=0; j<4; j++)
+                (*this)(i,j) *= factor;
+                
+        }
+    else
+        {
+        mpq_class adjQ[4][4];
+        for (int i=0; i<4; i++)
+            for (int j=0; j<4; j++)
+                adjQ[i][j] = (*this)(i,j);
+        for (int i=0; i<4; i++)
+            for (int j=0; j<4; j++)
+                (*this)(i,j) = adjQ[i][j];
+                
+        calculateStationaryFrequencies(this->pi);
+                
+        mpq_class averageRate;
+        for (int i=0; i<4; i++)
+            {
+            mpq_class sum;
+            for (int j=0; j<4; j++)
+                {
+                if (i != j)
+                    sum += (*this)(i,j);
+                }
+            (*this)(i,i) = -sum;
+            averageRate += pi[i] * sum;
+            }
+        mpq_class factor = 1 / averageRate;
+        for (int i=0; i<4; i++)
+            for (int j=0; j<4; j++)
+                (*this)(i,j) *= factor;
+        }
+}
+
+void MpqRateMatrix::calculateAverageRate(mpq_class& ave) {
+
+    ave = 0;
+    for (int i=0; i<4; i++)
+        ave += -(pi[i] * (*this)(i,i));
+}
+
 void MpqRateMatrix::calculateStationaryFrequencies(std::vector<mpq_class>& f) {
 
 	// transpose the rate matrix (qMatrix) and put into QT
@@ -93,6 +175,44 @@ void MpqRateMatrix::calculateStationaryFrequencies(std::vector<mpq_class>& f) {
     // make certain to initialize the instance variable
     for (int i=0; i<4; i++)
         this->pi[i] = f[i];
+}
+
+void MpqRateMatrix::calculateWeights(std::vector<mpq_class>& wts) {
+
+    if (wts.size() != 6)
+        throw(RbException("Weights array must have 6 elements"));
+        
+    // wts[0] = (pi[0] * (*this)(0,1) + pi[1] * (*this)(1,0)) / 2; // (pi[A] * (*this)(A,C) + pi[C] * (*this)(C,A)) / 2
+    // wts[1] = (pi[0] * (*this)(0,2) + pi[2] * (*this)(2,0)) / 2; // (pi[A] * (*this)(A,G) + pi[G] * (*this)(G,A)) / 2
+    // wts[2] = (pi[0] * (*this)(0,3) + pi[3] * (*this)(3,0)) / 2; // (pi[A] * (*this)(A,T) + pi[T] * (*this)(T,A)) / 2
+    // wts[3] = (pi[1] * (*this)(1,2) + pi[2] * (*this)(2,1)) / 2; // (pi[C] * (*this)(C,G) + pi[G] * (*this)(G,C)) / 2
+    // wts[4] = (pi[1] * (*this)(1,3) + pi[3] * (*this)(3,1)) / 2; // (pi[C] * (*this)(C,T) + pi[T] * (*this)(T,C)) / 2
+    // wts[5] = (pi[2] * (*this)(2,3) + pi[3] * (*this)(3,2)) / 2; // (pi[G] * (*this)(G,T) + pi[T] * (*this)(T,G)) / 2
+    for (int i=0, k=0; i<4; i++)
+        {
+        for (int j=i+1; j<4; j++)
+            wts[k++] = (pi[i] * (*this)(i,j) + pi[j] * (*this)(j,i)) / 2;
+        }
+}
+
+bool MpqRateMatrix::check(void) {
+
+    mpq_class averageRate;
+    for (int i=0; i<4; i++)
+        {
+        mpq_class sum;
+        for (int j=0; j<4; j++)
+            {
+            if (i != j)
+                sum += (*this)(i,j);
+            }
+        if ((*this)(i,i) != -sum)
+            return false;
+        averageRate += pi[i] * sum;
+        }
+    if (averageRate != 1)
+        return false;
+    return true;
 }
 
 void MpqRateMatrix::computeLandU(MpqRateMatrix& aMat, MpqRateMatrix& lMat, MpqRateMatrix& uMat) {
@@ -197,41 +317,36 @@ void MpqRateMatrix::initializeTimeReversibleModel(RandomVariable* rng) {
 void MpqRateMatrix::nonreversibilize(mpq_class& u1, mpq_class& u2, mpq_class& u3) {
 
     if (isReversible == false)
-        {
-        std::cout << "hey!" << std::endl;
-        throw(RbException("Cannot non-reversibilize a non-reversible rate matrix"));
-        }
+        throw(RbException("Cannot make a non-reversibilize model non-reversible (again)"));
         
     // we weren't nonreversible before, but we are now (or will be in a microsecond)
     isReversible = false;
     
-    enum States {A,C,G,T};
-
     // update rates (off diagonal components)
-    mpq_class qAC = (*this)(A,C) + (pi[C]/pi[A]) * (*this)(C,G) * (2 * u1 - 1) + (pi[C]/pi[A]) * (*this)(C,T) * (2 * u2 - 1);
-    mpq_class qAG = (*this)(A,G) - (pi[C]/pi[A]) * (*this)(C,G) * (2 * u1 - 1) + (pi[G]/pi[A]) * (*this)(G,T) * (2 * u3 - 1);
-    mpq_class qAT = (*this)(A,T) - (pi[C]/pi[A]) * (*this)(C,T) * (2 * u2 - 1) - (pi[G]/pi[A]) * (*this)(G,T) * (2 * u3 - 1);
-    mpq_class qCG = 2 * (*this)(C,G) * u1;
-    mpq_class qCT = 2 * (*this)(C,T) * u2;
-    mpq_class qGT = 2 * (*this)(G,T) * u3;
-    mpq_class qCA = (pi[A]/pi[C]) * (*this)(A,C) - (*this)(C,G) * (2 * u1 - 1) - (*this)(C,T) * (2 * u2 - 1);
-    mpq_class qGA = (pi[A]/pi[G]) * (*this)(A,G) + (pi[C]/pi[G]) * (*this)(C,G) * (2 * u1 - 1) - (*this)(G,T) * (2 * u3 - 1);
-    mpq_class qTA = (pi[A]/pi[T]) * (*this)(A,T) + (pi[C]/pi[T]) * (*this)(C,T) * (2 * u2 - 1) + (pi[G]/pi[T]) * (*this)(G,T) * (2 * u3 - 1);
-    mpq_class qGC = 2 * (pi[C]/pi[G]) * (*this)(C,G) * (1 - u1);
-    mpq_class qTC = 2 * (pi[C]/pi[T]) * (*this)(C,T) * (1 - u2);
-    mpq_class qTG = 2 * (pi[G]/pi[T]) * (*this)(G,T) * (1 - u3);
-    (*this)(A,C) = qAC;
-    (*this)(A,G) = qAG;
-    (*this)(A,T) = qAT;
-    (*this)(C,G) = qCG;
-    (*this)(C,T) = qCT;
-    (*this)(G,T) = qGT;
-    (*this)(C,A) = qCA;
-    (*this)(G,A) = qGA;
-    (*this)(T,A) = qTA;
-    (*this)(G,C) = qGC;
-    (*this)(T,C) = qTC;
-    (*this)(T,G) = qTG;
+    mpq_class qAC = (*this)(0,1) + (pi[1]/pi[0]) * (*this)(1,2) * (2 * u1 - 1) + (pi[1]/pi[0]) * (*this)(1,3) * (2 * u2 - 1);
+    mpq_class qAG = (*this)(0,2) - (pi[1]/pi[0]) * (*this)(1,2) * (2 * u1 - 1) + (pi[2]/pi[0]) * (*this)(2,3) * (2 * u3 - 1);
+    mpq_class qAT = (*this)(0,3) - (pi[1]/pi[0]) * (*this)(1,3) * (2 * u2 - 1) - (pi[2]/pi[0]) * (*this)(2,3) * (2 * u3 - 1);
+    mpq_class qCG = 2 * (*this)(1,2) * u1;
+    mpq_class qCT = 2 * (*this)(1,3) * u2;
+    mpq_class qGT = 2 * (*this)(2,3) * u3;
+    mpq_class qCA = (pi[0]/pi[1]) * (*this)(0,1) - (*this)(1,2) * (2 * u1 - 1) - (*this)(1,3) * (2 * u2 - 1);
+    mpq_class qGA = (pi[0]/pi[2]) * (*this)(0,2) + (pi[1]/pi[2]) * (*this)(1,2) * (2 * u1 - 1) - (*this)(2,3) * (2 * u3 - 1);
+    mpq_class qTA = (pi[0]/pi[3]) * (*this)(0,3) + (pi[1]/pi[3]) * (*this)(1,3) * (2 * u2 - 1) + (pi[2]/pi[3]) * (*this)(2,3) * (2 * u3 - 1);
+    mpq_class qGC = 2 * (pi[1]/pi[2]) * (*this)(1,2) * (1 - u1);
+    mpq_class qTC = 2 * (pi[1]/pi[3]) * (*this)(1,3) * (1 - u2);
+    mpq_class qTG = 2 * (pi[2]/pi[3]) * (*this)(2,3) * (1 - u3);
+    (*this)(0,1) = qAC;
+    (*this)(0,2) = qAG;
+    (*this)(0,3) = qAT;
+    (*this)(1,0) = qCA;
+    (*this)(1,2) = qCG;
+    (*this)(1,3) = qCT;
+    (*this)(2,0) = qGA;
+    (*this)(2,1) = qGC;
+    (*this)(2,3) = qGT;
+    (*this)(3,0) = qTA;
+    (*this)(3,1) = qTC;
+    (*this)(3,2) = qTG;
     
     // update the diagonal components of the rate matrix
     mpq_class sum;
@@ -248,15 +363,9 @@ void MpqRateMatrix::nonreversibilize(mpq_class& u1, mpq_class& u2, mpq_class& u3
         averageRate += pi[i] * sum;
         }
             
-    // the average rate should remain one. This is just a sanity check
+    // the average rate should remain one
     if (averageRate != 1)
-        {
-        std::cout << "Warning: the average rate should be one in updateToReversible" << std::endl;
-        mpq_class factor = 1 / averageRate;
-        for (int i=0; i<4; i++)
-            for (int j=0; j<4; j++)
-                (*this)(i,j) *= factor;
-        }
+        throw(RbException("Average rate should be one when moving to nonreversible model"));
 }
 
 void MpqRateMatrix::print(void) {
@@ -277,10 +386,7 @@ void MpqRateMatrix::print(void) {
 void MpqRateMatrix::reversibilize(void) {
 
     if (isReversible == true)
-        {
-        std::cout << "hey!" << std::endl;
         throw(RbException("Cannot reversibilize a time-reversible rate matrix"));
-        }
         
     // we weren't reversible before, but we are now (or will be in a microsecond)
     isReversible = true;
@@ -312,15 +418,11 @@ void MpqRateMatrix::reversibilize(void) {
         averageRate += pi[i] * sum;
         }
         
+    setExchangeabilityRates();
+        
     // make certain average rate is one
     if (averageRate != 1)
-        {
-        mpq_class factor = 1 / averageRate;
-        std::cout << "Warning: the average rate should be one in reversibilize" << std::endl;
-        for (int i=0; i<4; i++)
-            for (int j=0; j<4; j++)
-                (*this)(i,j) *= factor;
-        }
+        throw(RbException("Average rate should be one when moving to a reversible model"));
 }
 
 void MpqRateMatrix::setExchangeabilityRates(void) {
@@ -328,12 +430,31 @@ void MpqRateMatrix::setExchangeabilityRates(void) {
     if (isReversible == false)
         throw(RbException("Cannot set exchangeability rates for a non-reversible rate matrix"));
         
-    this->r[0] = (*this)(0,1) / pi[1]; // r_AC = Q(A,C) / pi[C]
-    this->r[1] = (*this)(0,2) / pi[2]; // r_AG = Q(A,G) / pi[G]
-    this->r[2] = (*this)(0,3) / pi[3]; // r_AT = Q(A,T) / pi[T]
-    this->r[3] = (*this)(1,2) / pi[2]; // r_CG = Q(C,G) / pi[G]
-    this->r[4] = (*this)(1,3) / pi[3]; // r_CT = Q(C,T) / pi[T]
-    this->r[5] = (*this)(2,3) / pi[3]; // r_GT = Q(G,T) / pi[T]
+    // this->r[0] = (*this)(0,1) / pi[1]; // r_AC = Q(A,C) / pi[C]
+    // this->r[1] = (*this)(0,2) / pi[2]; // r_AG = Q(A,G) / pi[G]
+    // this->r[2] = (*this)(0,3) / pi[3]; // r_AT = Q(A,T) / pi[T]
+    // this->r[3] = (*this)(1,2) / pi[2]; // r_CG = Q(C,G) / pi[G]
+    // this->r[4] = (*this)(1,3) / pi[3]; // r_CT = Q(C,T) / pi[T]
+    // this->r[5] = (*this)(2,3) / pi[3]; // r_GT = Q(G,T) / pi[T]
+        
+    mpq_class sum;
+    for (int i=0, k=0; i<4; i++)
+        {
+        for (int j=i+1; j<4; j++)
+            {
+            this->r[k] = (*this)(i,j) / pi[j];
+            sum += this->r[k];
+            k++;
+            }
+        }
+    for (int i=0; i<6; i++)
+        this->r[i] /= sum;
+}
+
+void MpqRateMatrix::setPi(std::vector<mpq_class>& f) {
+
+    for (int i=0; i<4; i++)
+        this->pi[i] = f[i];
 }
 
 void MpqRateMatrix::transposeMatrix(const MpqRateMatrix& a, MpqRateMatrix& t) {
@@ -341,4 +462,196 @@ void MpqRateMatrix::transposeMatrix(const MpqRateMatrix& a, MpqRateMatrix& t) {
 	for (int i=0; i<4; i++)
 		for (int j=0; j<4; j++)
 			t(j,i) = a(i,j);
+}
+
+double MpqRateMatrix::updateNonReversibleRates(RandomVariable* rng, double alpha0) {
+
+    if (isReversible == true)
+        throw(RbException("Can only update the 12 rates (directly) for non-reversible models"));
+    
+    // update the rates
+    std::vector<double> oldRates(12);
+    std::vector<double> newRates(12);
+    std::vector<double> alphaForward(12);
+    std::vector<double> alphaReverse(12);
+    double sum = 0.0;
+    for (int i=0, k=0; i<4; i++)
+        {
+        for (int j=0; j<4; j++)
+            {
+            if (i != j)
+                {
+                oldRates[k] = (*this)(i,j).get_d();
+                sum += oldRates[k];
+                k++;
+                }
+            }
+        }
+    for (int i=0; i<12; i++)
+        oldRates[i] /= sum;
+    for (int i=0; i<12; i++)
+        alphaForward[i] = oldRates[i] * alpha0;
+    Probability::Dirichlet::rv(rng, alphaForward, newRates);
+    Probability::Helper::normalize(newRates, MIN_FREQ);
+    for (int i=0; i<12; i++)
+        alphaReverse[i] = newRates[i] * alpha0;
+        
+    // update the rate matrix
+    for (int i=0, k=0; i<4; i++)
+        {
+        mpq_class sumQ;
+        for (int j=0; j<4; j++)
+            {
+            if (i != j)
+                {
+                (*this)(i,j) = newRates[k];
+                sumQ += (*this)(i,j);
+                k++;
+                }
+            }
+        (*this)(i,i) = -sumQ;
+        }
+    
+    // update pi for new rate matrix
+    calculateStationaryFrequencies(pi);
+    
+    // rescale rate matrix so average rate is one
+    mpq_class averageRate;
+    calculateAverageRate(averageRate);
+    mpq_class factor = 1 / averageRate;
+    for (int i=0; i<4; i++)
+        for (int j=0; j<4; j++)
+            (*this)(i,j) *= factor;
+
+    // return the log of the proposal probability
+    double lnProposalProb = Probability::Dirichlet::lnPdf(alphaReverse, oldRates)-
+                            Probability::Dirichlet::lnPdf(alphaForward, newRates);
+    return lnProposalProb;
+}
+
+double MpqRateMatrix::updateExchangeabilityRates(RandomVariable* rng, double alpha0) {
+
+    if (isReversible == false)
+        throw(RbException("Can only update the exchangability rates for time reversible models"));
+            
+    // update the rates
+    std::vector<double> oldRates(6);
+    std::vector<double> newRates(6);
+    std::vector<double> alphaForward(6);
+    std::vector<double> alphaReverse(6);
+    for (int i=0; i<6; i++)
+        oldRates[i] = r[i].get_d();
+    for (int i=0; i<6; i++)
+        alphaForward[i] = oldRates[i] * alpha0;
+    Probability::Dirichlet::rv(rng, alphaForward, newRates);
+    Probability::Helper::normalize(newRates, MIN_FREQ);
+    for (int i=0; i<6; i++)
+        alphaReverse[i] = newRates[i] * alpha0;
+        
+    r[0] = newRates[0];
+    r[1] = newRates[1];
+    r[2] = newRates[2];
+    r[3] = newRates[3];
+    r[4] = newRates[4];
+    mpq_class sum = r[0] + r[1] + r[2] + r[3] + r[4];
+    r[5] = 1 - sum;
+
+    // update the off-diagonal components of the rate matrix
+    for (int i=0, k=0; i<4; i++)
+        {
+        for (int j=i+1; j<4; j++)
+            {
+            (*this)(i,j) = r[k] * pi[j];
+            (*this)(j,i) = r[k] * pi[i];
+            k++;
+            }
+        }
+
+    // update the diagonals and calculate the average rate
+    mpq_class averageRate;
+    for (int i=0; i<4; i++)
+        {
+        sum = 0;
+        for (int j=0; j<4; j++)
+            {
+            if (i != j)
+                sum += (*this)(i,j);
+            }
+        (*this)(i,i) = -sum;
+        averageRate += pi[i] * sum;
+        }
+        
+    // rescale such that the average rate is one
+    mpq_class factor = 1 / averageRate;
+    for (int i=0; i<4; i++)
+        for (int j=0; j<4; j++)
+            (*this)(i,j) *= factor;
+
+    // return the log of the proposal probability
+    double lnProposalProb = Probability::Dirichlet::lnPdf(alphaReverse, oldRates) -
+                            Probability::Dirichlet::lnPdf(alphaForward, newRates);
+    return lnProposalProb;
+}
+
+double MpqRateMatrix::updateStationaryFrequencies(RandomVariable* rng, double alpha0) {
+
+    if (isReversible == false)
+        throw(RbException("Can only update the stationary frequencies (directly) for time reversible models"));
+                
+    // update the frequencies
+    std::vector<double> oldFreqs(4);
+    std::vector<double> newFreqs(4);
+    std::vector<double> alphaForward(4);
+    std::vector<double> alphaReverse(4);
+    for (int i=0; i<4; i++)
+        oldFreqs[i] = pi[i].get_d();
+    for (int i=0; i<4; i++)
+        alphaForward[i] = oldFreqs[i] * alpha0;
+    Probability::Dirichlet::rv(rng, alphaForward, newFreqs);
+    Probability::Helper::normalize(newFreqs, MIN_FREQ);
+    for (int i=0; i<4; i++)
+        alphaReverse[i] = newFreqs[i] * alpha0;
+
+    // change to GMP rationals
+    pi[0] = newFreqs[0];
+    pi[1] = newFreqs[1];
+    pi[2] = newFreqs[2];
+    mpq_class sum = pi[0] + pi[1] + pi[2];
+    pi[3] = 1 - sum;
+    
+    // update the off-diagonal components of the rate matrix
+    for (int i=0, k=0; i<4; i++)
+        {
+        for (int j=i+1; j<4; j++)
+            {
+            (*this)(i,j) = r[k] * pi[j];
+            (*this)(j,i) = r[k] * pi[i];
+            k++;
+            }
+        }
+
+    // update the diagonals and calculate the average rate
+    mpq_class averageRate;
+    for (int i=0; i<4; i++)
+        {
+        sum = 0;
+        for (int j=0; j<4; j++)
+            {
+            if (i != j)
+                sum += (*this)(i,j);
+            }
+        (*this)(i,i) = -sum;
+        averageRate += pi[i] * sum;
+        }
+        
+    // rescale such that the average rate is one
+    mpq_class factor = 1 / averageRate;
+    for (int i=0; i<4; i++)
+        for (int j=0; j<4; j++)
+            (*this)(i,j) *= factor;
+
+    // return the log of the proposal probability
+    double lnProposalProb = Probability::Dirichlet::lnPdf(alphaReverse, oldFreqs)-
+                            Probability::Dirichlet::lnPdf(alphaForward, newFreqs);
+    return lnProposalProb;
 }

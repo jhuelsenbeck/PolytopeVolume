@@ -15,7 +15,7 @@ std::vector<mpq_class> initializeRateMatrix(void);
 int main(int argc, const char* argv[]) {
 
     // interface, such as it is
-    int numCycles = 10000000;
+    int numCycles = 1000000;
 
     McmcState state;
     state.setAlphaT(1.0);
@@ -45,8 +45,12 @@ int main(int argc, const char* argv[]) {
         std::cout << std::fixed << std::setprecision(3) << (double)reversibleCount / n << " ";
         std::cout << state.stateString();
         std::cout << std::endl;
+        
         if (state.getIsTimeReversible() == true)
             reversibleCount++;
+            
+        if (n % 1000 == 0)
+            state.adjust();
         }
     std::cout << "Pr[Reversible] = " << (double)reversibleCount / numCycles << std::endl;
     
